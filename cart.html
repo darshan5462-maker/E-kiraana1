@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Cart</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="categories.html">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Your Cart 🧺</h1>
+    <p>Review items and proceed to checkout.</p>
+  </div>
+
+  <div class="card" id="items"></div>
+  <br>
+  <div class="card">
+    <div class="row space">
+      <b>Total</b>
+      <div class="price" id="total">₹0</div>
+    </div>
+    <br>
+    <button class="btn" onclick="checkout()">Proceed to Checkout</button>
+  </div>
+</div>
+
+<script>
+function cart(){
+  return JSON.parse(localStorage.getItem("cart")||"[]");
+}
+
+function render(){
+  const c=cart();
+  const box=document.getElementById("items");
+  if(c.length===0){
+    box.innerHTML="<b>Cart is empty.</b>";
+    document.getElementById("total").textContent="₹0";
+    return;
+  }
+
+  let html="";
+  let total=0;
+  c.forEach(i=>{
+    total += i.price*i.qty;
+    html += `
+      <div class="row space">
+        <div>
+          <b>${i.name}</b>
+          <div class="small">${i.brand} • ${i.unit} • Qty: ${i.qty}</div>
+        </div>
+        <div class="price">₹${i.price*i.qty}</div>
+      </div>
+      <hr style="border:0;border-top:1px solid #e5e7eb;margin:12px 0;">
+    `;
+  });
+  box.innerHTML=html;
+  document.getElementById("total").textContent="₹"+total;
+}
+render();
+
+function checkout(){
+  if(cart().length===0) return alert("Cart empty!");
+  location.href="checkout.html";
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

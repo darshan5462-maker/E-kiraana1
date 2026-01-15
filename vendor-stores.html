@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Vendor • Stores</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">V</div> Vendor Stores</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="vendor.html">Back</a>
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="hero">
+    <h1>My Stores 🏪</h1>
+    <p>Create store and manage your business.</p>
+  </div>
+
+  <!-- ✅ Create Store -->
+  <div class="card">
+    <div class="title">Create New Store</div>
+
+    <input class="input" id="storeName" placeholder="Store Name (ex: Fresh Mart)">
+    <br><br>
+    <input class="input" id="location" placeholder="Location / Area">
+    <br><br>
+    <input class="input" id="rating" placeholder="Rating (default 4.5)" value="4.5">
+    <br><br>
+    <input class="input" id="imageUrl" placeholder="Store Image URL (optional)">
+    <br><br>
+
+    <button class="btn" onclick="createStore()">➕ Create Store</button>
+    <p class="small" id="msg" style="margin-top:10px;"></p>
+  </div>
+
+  <br>
+
+  <!-- ✅ Store List -->
+  <div class="title">Your Stores</div>
+  <div class="grid cols-2" id="stores"></div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const vendor = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!vendor) location.href="index.html";
+if(role !== "vendor"){
+  alert("Access denied! Vendor only.");
+  location.href="index.html";
+}
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+
+function loadStores(){
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({ action:"vendorStores", vendor })
+  })
+  .then(r=>r.json())
+  .then(rows=>{
+    const box=document.getElementById("stores");
+    box.innerHTML="";
+
+    const list = rows.slice(1);
+
+    if(list.length === 0){
+      box.innerHTML = `<div class="card"><b>No Stores Found</b><div class="small">Create your first store above.</div></div>`;
+      return;
+    }
+
+    list.forEach(s=>{
+      const d=document.createElement("div");
+      d.className="card";
+      d.innerHTML=`
+        <b style="font-size:18px">${s[1]}</b>
+        <div class="small">${s[2] || ""}</div>
+        <div class="row space" style="margin-top:10px">
+          <div class="price">${s[3] ? "⭐ "+s[3] : ""}</div>
+          <div class="small">ID: ${s[0]}</div>
+        </div>
+        ${s[4] ? `<img src="${s[4]}" style="width:100%;height:160px;object-fit:cover;border-radius:16px;margin-top:10px;border:1px solid #e5e7eb;">` : ""}
+      `;
+      box.appendChild(d);
+    });
+  });
+}
+
+function createStore(){
+  const storeName = document.getElementById("storeName").value.trim();
+  const location = document.getElementById("location").value.trim();
+  const rating = document.getElementById("rating").value.trim() || "4.5";
+  const imageUrl = document.getElementById("imageUrl").value.trim();
+  const msg = document.getElementById("msg");
+
+  if(!storeName){
+    msg.textContent = "Store name required!";
+    return;
+  }
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"vendorCreateStore",
+      vendor,
+      storeName,
+      location,
+      rating,
+      imageUrl
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      msg.textContent = "Store created ✅ ID: " + d.storeId;
+      document.getElementById("storeName").value="";
+      document.getElementById("location").value="";
+      document.getElementById("imageUrl").value="";
+      loadStores();
+    }else{
+      msg.textContent = d.msg || "Failed to create store.";
+    }
+  });
+}
+
+loadStores();
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Vendor • Orders</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">V</div> Vendor Orders</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="vendor.html">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Customer Orders 📦</h1>
+    <p>Accept / Reject orders from customers.</p>
+  </div>
+
+  <div class="grid cols-2" id="orders"></div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const vendor = localStorage.getItem("user");
+if(!vendor) location.href="index.html";
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"vendorOrders", vendor})})
+.then(r=>r.json())
+.then(rows=>{
+  const box=document.getElementById("orders");
+  box.innerHTML="";
+  rows.slice(1).reverse().forEach(o=>{
+    const d=document.createElement("div");
+    d.className="card";
+    d.innerHTML=`
+      <b>Order: ${o[0]}</b>
+      <div class="small">Customer: ${o[1]}</div>
+      <div class="small">Store ID: ${o[2]}</div>
+      <div class="row space" style="margin-top:10px">
+        <div class="price">₹${o[4]}</div>
+        <b>${o[5]}</b>
+      </div>
+      <br>
+      <button class="btn" onclick="updateOrder('${o[0]}','Accepted')">✅ Accept</button>
+      <button class="btn outline" onclick="updateOrder('${o[0]}','Rejected')">❌ Reject</button>
+    `;
+    box.appendChild(d);
+  });
+});
+
+function updateOrder(orderId,status){
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({action:"updateOrder", orderId, status})
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      alert("Order "+status);
+      location.reload();
+    } else alert(d.msg||"Failed");
+  });
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

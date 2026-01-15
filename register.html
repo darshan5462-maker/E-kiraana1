@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Register</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand">
+      <div class="logo">P</div> PureDrop
+    </div>
+    <div class="nav-actions">
+      <a class="btn outline" href="index.html">Login</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Create account ✨</h1>
+    <p>Choose role and start using the platform.</p>
+  </div>
+
+  <div class="card">
+    <div class="title">Register</div>
+
+    <input class="input" id="username" placeholder="Username">
+    <br><br>
+    <input class="input" id="password" type="password" placeholder="Password">
+    <br><br>
+    <input class="input" id="phone" placeholder="Phone number">
+    <br><br>
+
+    <select class="input" id="role">
+      <option value="customer">Customer</option>
+      <option value="vendor">Vendor</option>
+    </select>
+
+    <br><br>
+    <button class="btn" onclick="register()">Register</button>
+    <p class="small" id="msg" style="margin-top:12px;"></p>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+
+function register(){
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const role = document.getElementById("role").value;
+  const msg = document.getElementById("msg");
+
+  if(!username || !password){
+    msg.textContent = "Username and password required.";
+    return;
+  }
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({ action:"register", username, password, role, phone })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      alert("Registered successfully ✅");
+      location.href="index.html";
+    } else {
+      msg.textContent = d.msg || "Register failed.";
+    }
+  });
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

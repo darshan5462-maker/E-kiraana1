@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Delivery • Orders</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand">
+      <div class="logo">D</div> Delivery Orders
+    </div>
+    <div class="nav-actions">
+      <a class="btn outline" href="delivery.html">Back</a>
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="hero">
+    <h1>Assigned Orders 🚚</h1>
+    <p>Update order delivery status.</p>
+  </div>
+
+  <div class="grid cols-2" id="orders"></div>
+
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+
+const deliveryBoy = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!deliveryBoy) location.href="index.html";
+if(role !== "delivery"){
+  alert("Access denied! Delivery only.");
+  location.href="index.html";
+}
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+
+// ✅ Load assigned orders
+function loadOrders(){
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"deliveryOrders",
+      deliveryBoy: deliveryBoy
+    })
+  })
+  .then(r=>r.json())
+  .then(rows=>{
+    const box = document.getElementById("orders");
+    box.innerHTML="";
+
+    const list = rows.slice(1).reverse();
+
+    if(list.length===0){
+      box.innerHTML = `<div class="card"><b>No assigned orders.</b><div class="small">Wait for vendor/admin assignment.</div></div>`;
+      return;
+    }
+
+    list.forEach(o=>{
+      // Orders sheet:
+      // 0=orderId 1=customer 2=storeId 3=items 4=total 5=status 6=payment 7=date 8=deliveryBoy 9=address
+
+      const status = o[5];
+
+      const d = document.createElement("div");
+      d.className="card";
+      d.innerHTML=`
+        <b>Order: ${o[0]}</b>
+        <div class="small">Customer: ${o[1]}</div>
+        <div class="small">Store ID: ${o[2]}</div>
+        <div class="small">Address: ${o[9] || "-"}</div>
+
+        <div class="row space" style="margin-top:10px">
+          <div class="price">₹${o[4]}</div>
+          <b style="color:${statusColor(status)}">${status}</b>
+        </div>
+
+        <br>
+        ${buttons(o[0], status)}
+      `;
+      box.appendChild(d);
+    });
+  });
+}
+
+function statusColor(status){
+  if(status === "Accepted") return "#f59e0b";
+  if(status === "Out for delivery") return "#2563eb";
+  if(status === "Delivered") return "#16a34a";
+  return "#6b7280";
+}
+
+function buttons(orderId, status){
+  // ✅ show correct actions based on current status
+  if(status === "Accepted"){
+    return `<button class="btn" onclick="update('${orderId}','Out for delivery')">🚚 Start Delivery</button>`;
+  }
+  if(status === "Out for delivery"){
+    return `<button class="btn" onclick="update('${orderId}','Delivered')">✅ Mark Delivered</button>`;
+  }
+  return `<div class="small">No action available</div>`;
+}
+
+// ✅ Update delivery status
+function update(orderId, status){
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"deliveryUpdate",
+      orderId: orderId,
+      status: status,
+      deliveryBoy: deliveryBoy
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      alert("Updated to: " + status);
+      loadOrders();
+    }else{
+      alert(d.msg || "Failed");
+    }
+  });
+}
+
+loadOrders();
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

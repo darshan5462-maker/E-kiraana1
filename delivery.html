@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Delivery • Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand">
+      <div class="logo">D</div> Delivery Panel
+    </div>
+    <div class="nav-actions">
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Delivery Dashboard 🚚</h1>
+    <p>See orders assigned to you and update delivery status.</p>
+  </div>
+
+  <!-- Cards -->
+  <div class="grid cols-3">
+    <a class="card" href="delivery-orders.html">
+      <b>Assigned Orders</b>
+      <div class="small">Accepted / Out for delivery</div>
+    </a>
+
+    <a class="card" href="home.html">
+      <b>Go to Customer Home</b>
+      <div class="small">For testing purpose only</div>
+    </a>
+
+    <div class="card">
+      <b>Logged in as</b>
+      <div class="small" id="me">-</div>
+      <div class="small" id="role">-</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const user = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!user) location.href="index.html";
+if(role !== "delivery"){
+  alert("Access denied! Delivery only.");
+  location.href="index.html";
+}
+
+document.getElementById("me").textContent = user;
+document.getElementById("role").textContent = "Role: " + role;
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

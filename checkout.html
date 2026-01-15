@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Checkout</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="cart.html">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Checkout ✅</h1>
+    <p>Confirm your order (Cash on Delivery).</p>
+  </div>
+
+  <div class="card">
+    <div class="title">Delivery Details</div>
+    <input class="input" id="address" placeholder="Enter delivery address">
+    <br><br>
+    <button class="btn" onclick="placeOrder()">Place Order</button>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+
+function cart(){ return JSON.parse(localStorage.getItem("cart")||"[]"); }
+
+function placeOrder(){
+  const address=document.getElementById("address").value.trim();
+  if(!address) return alert("Enter address!");
+
+  const user=localStorage.getItem("user");
+  const storeId=localStorage.getItem("storeId");
+  const items=cart();
+  const total=items.reduce((a,b)=>a+(b.price*b.qty),0);
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"placeOrder",
+      customer:user,
+      storeId:storeId,
+      items:JSON.stringify(items),
+      total: total
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      localStorage.removeItem("cart");
+      alert("Order placed ✅");
+      location.href="orders.html";
+    }else{
+      alert(d.msg||"Failed");
+    }
+  });
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

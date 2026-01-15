@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Stores</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="orders.html">My Orders</a>
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Nearby Stores 🛒</h1>
+    <p>Select a store to explore categories and products.</p>
+  </div>
+
+  <div class="grid cols-3" id="stores"></div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const user = localStorage.getItem("user");
+if(!user) location.href="index.html";
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"stores"})})
+.then(r=>r.json())
+.then(rows=>{
+  const box=document.getElementById("stores");
+  box.innerHTML="";
+  rows.slice(1).forEach(s=>{
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <div class="row space">
+        <div>
+          <b style="font-size:18px">${s[1]}</b>
+          <div class="small">${s[2] || ""}</div>
+        </div>
+        <div class="price">${s[3] ? "⭐ "+s[3] : ""}</div>
+      </div>
+      <br>
+      <button class="btn" onclick="openStore('${s[0]}','${s[1]}')">Open Store</button>
+    `;
+    box.appendChild(card);
+  });
+});
+
+function openStore(id,name){
+  localStorage.setItem("storeId",id);
+  localStorage.setItem("storeName",name);
+  location.href="categories.html";
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

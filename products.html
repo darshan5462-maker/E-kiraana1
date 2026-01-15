@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Products</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="cart.html">Cart<span class="badge" id="cartCount">0</span></a>
+      <a class="btn outline" href="categories.html">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1 id="catTitle">Products</h1>
+    <p>Search and add items to cart.</p>
+  </div>
+
+  <input class="input" id="search" placeholder="Search products..." oninput="render()">
+  <br><br>
+
+  <div class="grid cols-2" id="list"></div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const storeId = localStorage.getItem("storeId");
+const category = localStorage.getItem("category");
+
+document.getElementById("catTitle").textContent = category || "Products";
+
+let PRODUCTS = [];
+
+function cart(){
+  return JSON.parse(localStorage.getItem("cart")||"[]");
+}
+function saveCart(c){
+  localStorage.setItem("cart",JSON.stringify(c));
+  updateCartCount();
+}
+function updateCartCount(){
+  const c=cart();
+  const count=c.reduce((a,b)=>a+(b.qty||1),0);
+  document.getElementById("cartCount").textContent=count;
+}
+updateCartCount();
+
+fetch(API,{
+  method:"POST",
+  body:JSON.stringify({action:"products", storeId, category})
+})
+.then(r=>r.json())
+.then(rows=>{
+  PRODUCTS = rows.slice(1).map(i=>({
+    id:i[0],
+    storeId:i[1],
+    category:i[2],
+    name:i[3],      // ✅ productName
+    brand:i[4],
+    price:Number(i[5]),
+    unit:i[6]
+  }));
+  render();
+});
+
+function render(){
+  const q=document.getElementById("search").value.toLowerCase();
+  const box=document.getElementById("list");
+  box.innerHTML="";
+
+  PRODUCTS.filter(p => (p.name+" "+p.brand).toLowerCase().includes(q))
+  .forEach(p=>{
+    const d=document.createElement("div");
+    d.className="card";
+    d.innerHTML=`
+      <div class="product">
+        <div class="img"></div>
+        <div style="flex:1">
+          <b>${p.name}</b>
+          <div class="small">${p.brand} • ${p.unit}</div>
+          <div class="row space">
+            <div class="price">₹${p.price}</div>
+            <div class="qty">
+              <button class="qbtn" onclick="dec('${p.id}')">-</button>
+              <b id="q_${p.id}">${getQty(p.id)}</b>
+              <button class="qbtn" onclick="inc('${p.id}','${p.name}','${p.brand}',${p.price},'${p.unit}')">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    box.appendChild(d);
+  });
+}
+
+function getQty(id){
+  const c=cart();
+  const it=c.find(x=>x.id===id);
+  return it? it.qty : 0;
+}
+
+function inc(id,name,brand,price,unit){
+  const c=cart();
+  const ex=c.find(x=>x.id===id);
+  if(ex) ex.qty++;
+  else c.push({id,name,brand,price,unit,qty:1});
+  saveCart(c);
+  document.getElementById("q_"+id).textContent=getQty(id);
+}
+
+function dec(id){
+  const c=cart();
+  const ex=c.find(x=>x.id===id);
+  if(!ex) return;
+  ex.qty--;
+  if(ex.qty<=0){
+    const idx=c.findIndex(x=>x.id===id);
+    c.splice(idx,1);
+  }
+  saveCart(c);
+  const el=document.getElementById("q_"+id);
+  if(el) el.textContent=getQty(id);
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

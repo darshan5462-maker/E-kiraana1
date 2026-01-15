@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Vendor • Add Product</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">V</div> Add Product</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="vendor.html">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Add New Product ➕</h1>
+    <p>Select store and add product details.</p>
+  </div>
+
+  <div class="card">
+    <select class="input" id="store"></select>
+    <br><br>
+    <input class="input" id="category" placeholder="Category (e.g. Fruits)">
+    <br><br>
+    <input class="input" id="productName" placeholder="Product name">
+    <br><br>
+    <input class="input" id="brand" placeholder="Brand">
+    <br><br>
+    <input class="input" id="price" type="number" placeholder="Price">
+    <br><br>
+    <input class="input" id="unit" placeholder="Unit (1kg / 500g / 1L)">
+    <br><br>
+    <button class="btn" onclick="addProduct()">Add Product</button>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const vendor = localStorage.getItem("user");
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"vendorStores", vendor})})
+.then(r=>r.json())
+.then(rows=>{
+  const sel=document.getElementById("store");
+  rows.slice(1).forEach(s=>{
+    const op=document.createElement("option");
+    op.value=s[0];
+    op.textContent=s[1]+" ("+s[0]+")";
+    sel.appendChild(op);
+  });
+});
+
+function addProduct(){
+  const storeId=document.getElementById("store").value;
+  const category=document.getElementById("category").value.trim();
+  const productName=document.getElementById("productName").value.trim();
+  const brand=document.getElementById("brand").value.trim();
+  const price=document.getElementById("price").value.trim();
+  const unit=document.getElementById("unit").value.trim();
+
+  if(!category||!productName||!price||!unit) return alert("Fill all fields");
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"vendorAddProduct",
+      vendor,
+      storeId,
+      category,
+      productName,
+      brand,
+      price,
+      unit
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      alert("Product Added ✅");
+      document.getElementById("productName").value="";
+      document.getElementById("brand").value="";
+      document.getElementById("price").value="";
+      document.getElementById("unit").value="";
+    } else {
+      alert(d.msg||"Failed");
+    }
+  });
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

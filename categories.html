@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Categories</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="cart.html">Cart<span class="badge" id="cartCount">0</span></a>
+      <a class="btn outline" href="home.html">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1 id="storeName">Categories</h1>
+    <p>Choose category to see products.</p>
+  </div>
+
+  <div class="grid cols-3" id="cats"></div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const storeId = localStorage.getItem("storeId");
+const storeName = localStorage.getItem("storeName");
+document.getElementById("storeName").textContent = storeName || "Categories";
+
+function updateCartCount(){
+  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
+  const count = cart.reduce((a,b)=>a+(b.qty||1),0);
+  document.getElementById("cartCount").textContent=count;
+}
+updateCartCount();
+
+fetch(API,{method:"POST",body:JSON.stringify({action:"categories"})})
+.then(r=>r.json())
+.then(rows=>{
+  const box=document.getElementById("cats");
+  box.innerHTML="";
+  rows.slice(1).forEach(c=>{
+    const d=document.createElement("div");
+    d.className="card";
+    d.style.cursor="pointer";
+    d.innerHTML=`
+      <b style="font-size:18px">${c[0]}</b>
+      <div class="small">Tap to view items</div>
+    `;
+    d.onclick=()=>{
+      localStorage.setItem("category",c[0]);
+      location.href="products.html";
+    };
+    box.appendChild(d);
+  });
+});
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

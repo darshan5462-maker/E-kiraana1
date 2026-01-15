@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Vendor • Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">V</div> Vendor Panel</div>
+    <div class="nav-actions">
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Vendor Dashboard 🏪</h1>
+    <p>Manage stores, products and customer orders.</p>
+  </div>
+
+  <div class="grid cols-3">
+    <a class="card" href="vendor-stores.html">
+      <b>My Stores</b>
+      <div class="small">View & manage your stores</div>
+    </a>
+
+    <a class="card" href="vendor-products.html">
+      <b>Products</b>
+      <div class="small">Add products to store</div>
+    </a>
+
+    <a class="card" href="vendor-orders.html">
+      <b>Orders</b>
+      <div class="small">Accept / Reject orders</div>
+    </a>
+  </div>
+</div>
+
+<script>
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

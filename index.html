@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PureDrop • Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand">
+      <div class="logo">P</div> PureDrop
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Welcome back 👋</h1>
+    <p>Login and order groceries from nearby stores.</p>
+  </div>
+
+  <div class="card">
+    <div class="title">Login</div>
+
+    <input class="input" id="username" placeholder="Username">
+    <br><br>
+    <input class="input" id="password" type="password" placeholder="Password">
+    <br><br>
+
+    <button class="btn" onclick="login()">Login</button>
+    <a class="btn outline" href="register.html">Create Account</a>
+
+    <p class="small" id="msg" style="margin-top:12px;"></p>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+
+function login(){
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
+
+  if(!username || !password){
+    msg.textContent = "Enter username and password.";
+    return;
+  }
+
+  fetch(API,{
+    method:"POST",
+    body:JSON.stringify({ action:"login", username, password })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.ok){
+      localStorage.setItem("user", d.user);
+      localStorage.setItem("role", d.role);
+
+      if(d.role === "vendor"){
+        location.href = "vendor.html";
+      } else {
+        location.href = "home.html";
+      }
+    } else {
+      msg.textContent = d.msg || "Login failed.";
+    }
+  });
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

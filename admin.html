@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Admin • Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand">
+      <div class="logo">A</div> Admin Panel
+    </div>
+    <div class="nav-actions">
+      <button class="btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="hero">
+    <h1>Admin Dashboard 🛠️</h1>
+    <p>Manage users, stores, categories and orders.</p>
+  </div>
+
+  <div class="grid cols-3">
+    <a class="card" href="admin-users.html">
+      <b>Users</b>
+      <div class="small">View all registered users</div>
+    </a>
+
+    <a class="card" href="admin-stores.html">
+      <b>Stores</b>
+      <div class="small">View all stores</div>
+    </a>
+
+    <a class="card" href="admin-orders.html">
+      <b>Orders</b>
+      <div class="small">Track and assign delivery</div>
+    </a>
+
+    <a class="card" href="admin-categories.html">
+      <b>Categories</b>
+      <div class="small">Add categories + images</div>
+    </a>
+
+    <div class="card">
+      <b>Logged in as</b>
+      <div class="small" id="me">-</div>
+      <div class="small" id="role">-</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const user = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!user) location.href="index.html";
+if(role !== "admin"){
+  alert("Access denied! Admin only.");
+  location.href="index.html";
+}
+
+document.getElementById("me").textContent = user;
+document.getElementById("role").textContent = "Role: " + role;
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>
