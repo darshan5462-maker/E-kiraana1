@@ -3,71 +3,238 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Vendor • Add Product</title>
+  <title>e-Kiraana • Add Products</title>
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    .preview{
+      width:100%;
+      height:180px;
+      border:1px solid #e2e8f0;
+      border-radius:20px;
+      overflow:hidden;
+      margin-top:10px;
+      background:linear-gradient(135deg,#e0f2fe,#dcfce7);
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      color:#0284c7;
+    }
+    .preview img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+  </style>
 </head>
 <body>
 
+<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">V</div> Add Product</div>
+    <div class="brand">
+      <div class="logo">E</div> e-Kiraana
+    </div>
     <div class="nav-actions">
       <a class="btn outline" href="vendor.html">Back</a>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
+
   <div class="hero">
-    <h1>Add New Product ➕</h1>
-    <p>Select store and add product details.</p>
+    <h1>Add Grocery Products 🧺</h1>
+    <p>Select your store and add grocery items with images.</p>
   </div>
 
-  <div class="card">
-    <select class="input" id="store"></select>
-    <br><br>
-    <input class="input" id="category" placeholder="Category (e.g. Fruits)">
-    <br><br>
-    <input class="input" id="productName" placeholder="Product name">
-    <br><br>
-    <input class="input" id="brand" placeholder="Brand">
-    <br><br>
-    <input class="input" id="price" type="number" placeholder="Price">
-    <br><br>
-    <input class="input" id="unit" placeholder="Unit (1kg / 500g / 1L)">
-    <br><br>
-    <button class="btn" onclick="addProduct()">Add Product</button>
+  <div class="grid cols-2">
+
+    <!-- Add Product Form -->
+    <div class="card">
+      <div class="title">Add Product</div>
+
+      <label class="small"><b>Select Store</b></label>
+      <select class="input" id="store"></select>
+      <br><br>
+
+      <label class="small"><b>Select Category</b></label>
+      <select class="input" id="category"></select>
+      <br><br>
+
+      <input class="input" id="productName" placeholder="Product Name (ex: Tomato)">
+      <br><br>
+
+      <input class="input" id="brand" placeholder="Brand (optional)">
+      <br><br>
+
+      <input class="input" id="price" type="number" placeholder="Price (ex: 40)">
+      <br><br>
+
+      <input class="input" id="unit" placeholder="Unit (ex: 1kg / 500g / 1L)">
+      <br><br>
+
+      <input class="input" id="imageUrl" placeholder="Product Image URL (optional)" oninput="previewImg()">
+      <div class="preview" id="preview">Image Preview</div>
+
+      <br>
+      <button class="btn" style="width:100%" onclick="addProduct()">➕ Add Product</button>
+
+      <p class="small" id="msg" style="margin-top:10px;"></p>
+    </div>
+
+    <!-- Tips -->
+    <div class="card">
+      <div class="title">Tips for Better Sales 📈</div>
+      <div class="small" style="font-size:14px;line-height:1.7">
+        ✅ Add clear product images <br>
+        ✅ Use proper units like 1kg, 500g, 1L <br>
+        ✅ Keep price updated daily <br>
+        ✅ Add brand only when required <br><br>
+
+        <b>Example Image URL:</b><br>
+        Paste any Google image link / product image link.
+      </div>
+
+      <hr>
+      <div class="small">
+        If store list is empty: first create store in <b>Vendor Stores</b>.
+      </div>
+    </div>
+
   </div>
+
 </div>
 
-<script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
-const vendor = localStorage.getItem("user");
+<!-- Toast -->
+<div class="toast" id="toast">Product added ✅</div>
 
-fetch(API,{method:"POST",body:JSON.stringify({action:"vendorStores", vendor})})
-.then(r=>r.json())
-.then(rows=>{
-  const sel=document.getElementById("store");
-  rows.slice(1).forEach(s=>{
-    const op=document.createElement("option");
-    op.value=s[0];
-    op.textContent=s[1]+" ("+s[0]+")";
-    sel.appendChild(op);
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
+const vendor = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!vendor) location.href="index.html";
+if(role !== "vendor"){
+  alert("Access denied! Only shop owners (vendor).");
+  location.href="index.html";
+}
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+
+function showToast(text, color="green"){
+  const t = document.getElementById("toast");
+  t.textContent = text;
+
+  if(color==="red") t.style.background="#ef4444";
+  else if(color==="yellow") t.style.background="#f59e0b";
+  else t.style.background="#16a34a";
+
+  t.style.display="block";
+  setTimeout(()=>{ t.style.display="none"; }, 2000);
+}
+
+// Load vendor stores
+function loadStores(){
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"vendorStores", vendor })
+  })
+  .then(r=>r.json())
+  .then(rows=>{
+    const sel=document.getElementById("store");
+    sel.innerHTML="";
+
+    const list = rows.slice(1);
+
+    if(list.length===0){
+      sel.innerHTML = `<option value="">No store found</option>`;
+      return;
+    }
+
+    list.forEach(s=>{
+      const opt=document.createElement("option");
+      opt.value=s[0]; // storeId
+      opt.textContent=`${s[1]} (${s[0]})`;
+      sel.appendChild(opt);
+    });
   });
-});
+}
+
+// Load categories
+function loadCategories(){
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"categories" })
+  })
+  .then(r=>r.json())
+  .then(rows=>{
+    const sel=document.getElementById("category");
+    sel.innerHTML="";
+
+    const list = rows.slice(1);
+
+    if(list.length===0){
+      sel.innerHTML=`<option value="">No categories</option>`;
+      return;
+    }
+
+    list.forEach(c=>{
+      const opt=document.createElement("option");
+      opt.value=c[0];
+      opt.textContent=c[0];
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function previewImg(){
+  const url = document.getElementById("imageUrl").value.trim();
+  const box = document.getElementById("preview");
+
+  if(!url){
+    box.innerHTML = "Image Preview";
+    return;
+  }
+
+  box.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='Invalid image URL ❌'">`;
+}
 
 function addProduct(){
-  const storeId=document.getElementById("store").value;
-  const category=document.getElementById("category").value.trim();
-  const productName=document.getElementById("productName").value.trim();
-  const brand=document.getElementById("brand").value.trim();
-  const price=document.getElementById("price").value.trim();
-  const unit=document.getElementById("unit").value.trim();
+  const storeId = document.getElementById("store").value.trim();
+  const category = document.getElementById("category").value.trim();
+  const productName = document.getElementById("productName").value.trim();
+  const brand = document.getElementById("brand").value.trim();
+  const price = document.getElementById("price").value.trim();
+  const unit = document.getElementById("unit").value.trim();
+  const imageUrl = document.getElementById("imageUrl").value.trim();
+  const msg = document.getElementById("msg");
 
-  if(!category||!productName||!price||!unit) return alert("Fill all fields");
+  msg.textContent = "";
+
+  if(!storeId){
+    msg.textContent = "Please create/select store first.";
+    showToast("No store selected ⚠️", "yellow");
+    return;
+  }
+
+  if(!category || !productName || !price || !unit){
+    msg.textContent = "Fill all required fields!";
+    showToast("Fill all required fields ⚠️", "yellow");
+    return;
+  }
 
   fetch(API,{
     method:"POST",
+    headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({
       action:"vendorAddProduct",
       vendor,
@@ -76,22 +243,36 @@ function addProduct(){
       productName,
       brand,
       price,
-      unit
+      unit,
+      imageUrl
     })
   })
   .then(r=>r.json())
   .then(d=>{
     if(d.ok){
-      alert("Product Added ✅");
+      showToast("Product added successfully ✅");
+
       document.getElementById("productName").value="";
       document.getElementById("brand").value="";
       document.getElementById("price").value="";
       document.getElementById("unit").value="";
-    } else {
-      alert(d.msg||"Failed");
+      document.getElementById("imageUrl").value="";
+      previewImg();
+
+    }else{
+      msg.textContent = d.msg || "Failed!";
+      showToast(d.msg || "Failed ❌", "red");
     }
+  })
+  .catch(err=>{
+    console.error(err);
+    msg.textContent = "Server error! Check deployment.";
+    showToast("Server error ❌", "red");
   });
 }
+
+loadStores();
+loadCategories();
 </script>
 
 <div class="footer-space"></div>

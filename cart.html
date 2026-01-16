@@ -3,76 +3,205 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>PureDrop • Cart</title>
+  <title>e-Kiraana • Cart</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="brand">
+      <div class="logo">E</div> e-Kiraana
+    </div>
     <div class="nav-actions">
       <a class="btn outline" href="categories.html">Back</a>
+      <a class="btn outline" href="orders.html">My Orders</a>
     </div>
   </div>
 </div>
 
 <div class="container">
+
   <div class="hero">
     <h1>Your Cart 🧺</h1>
-    <p>Review items and proceed to checkout.</p>
+    <p>Review groceries and proceed to checkout.</p>
   </div>
 
-  <div class="card" id="items"></div>
-  <br>
-  <div class="card">
-    <div class="row space">
-      <b>Total</b>
-      <div class="price" id="total">₹0</div>
+  <div class="grid cols-2">
+    <!-- Items -->
+    <div class="card">
+      <div class="title">Cart Items</div>
+      <div id="items"></div>
     </div>
-    <br>
-    <button class="btn" onclick="checkout()">Proceed to Checkout</button>
+
+    <!-- Summary -->
+    <div class="card">
+      <div class="title">Bill Summary</div>
+
+      <div class="row space">
+        <div class="small">Items Total</div>
+        <b id="subtotal">₹0</b>
+      </div>
+
+      <div class="row space" style="margin-top:8px">
+        <div class="small">Delivery Fee</div>
+        <b id="deliveryFee">₹0</b>
+      </div>
+
+      <hr>
+
+      <div class="row space">
+        <b>Total Amount</b>
+        <div class="price" id="total">₹0</div>
+      </div>
+
+      <br>
+      <button class="btn" style="width:100%" onclick="goCheckout()">Proceed to Checkout</button>
+      <button class="btn outline" style="width:100%;margin-top:10px" onclick="clearCart()">Clear Cart</button>
+
+      <p class="small" style="margin-top:10px">
+        ✅ Payment: Cash on Delivery (COD)
+      </p>
+    </div>
   </div>
+
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast">Updated cart ✅</div>
+
 <script>
-function cart(){
-  return JSON.parse(localStorage.getItem("cart")||"[]");
+const user = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!user) location.href="index.html";
+if(role !== "customer"){
+  alert("Only customers can access this page!");
+  location.href="index.html";
 }
 
-function render(){
-  const c=cart();
-  const box=document.getElementById("items");
-  if(c.length===0){
-    box.innerHTML="<b>Cart is empty.</b>";
+function showToast(text, color="green"){
+  const t = document.getElementById("toast");
+  t.textContent = text;
+
+  if(color==="red") t.style.background="#ef4444";
+  else if(color==="yellow") t.style.background="#f59e0b";
+  else t.style.background="#16a34a";
+
+  t.style.display="block";
+  setTimeout(()=>{ t.style.display="none"; }, 1700);
+}
+
+function getCart(){
+  return JSON.parse(localStorage.getItem("cart") || "[]");
+}
+function saveCart(c){
+  localStorage.setItem("cart", JSON.stringify(c));
+  renderCart();
+}
+
+function renderCart(){
+  const cart = getCart();
+  const box = document.getElementById("items");
+
+  if(cart.length === 0){
+    box.innerHTML = `<b>Your cart is empty.</b><div class="small">Add groceries from products page.</div>`;
+    document.getElementById("subtotal").textContent="₹0";
+    document.getElementById("deliveryFee").textContent="₹0";
     document.getElementById("total").textContent="₹0";
     return;
   }
 
-  let html="";
-  let total=0;
-  c.forEach(i=>{
-    total += i.price*i.qty;
+  let subtotal = 0;
+  let html = "";
+
+  cart.forEach((i, idx)=>{
+    subtotal += (i.price * i.qty);
+
     html += `
-      <div class="row space">
-        <div>
-          <b>${i.name}</b>
-          <div class="small">${i.brand} • ${i.unit} • Qty: ${i.qty}</div>
+      <div class="product" style="margin-bottom:12px">
+        <div class="imgbox" style="width:70px;height:70px">
+          ${
+            i.img
+            ? `<img src="${i.img}" alt="${i.name}">`
+            : `<div style="width:100%;height:100%;display:grid;place-items:center;font-weight:900;color:#0284c7;">No Img</div>`
+          }
         </div>
-        <div class="price">₹${i.price*i.qty}</div>
+
+        <div style="flex:1">
+          <b style="font-size:16px">${i.name}</b>
+          <div class="small">${i.brand || ""} • ${i.unit}</div>
+
+          <div class="row space" style="margin-top:10px">
+            <div class="price">₹${i.price * i.qty}</div>
+
+            <div class="qty">
+              <button class="qbtn" onclick="dec(${idx})">-</button>
+              <b>${i.qty}</b>
+              <button class="qbtn" onclick="inc(${idx})">+</button>
+              <button class="qbtn" onclick="removeItem(${idx})" title="Remove">🗑️</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <hr style="border:0;border-top:1px solid #e5e7eb;margin:12px 0;">
+      <hr>
     `;
   });
-  box.innerHTML=html;
-  document.getElementById("total").textContent="₹"+total;
-}
-render();
 
-function checkout(){
-  if(cart().length===0) return alert("Cart empty!");
+  box.innerHTML = html;
+
+  // ✅ delivery fee (optional rule)
+  const deliveryFee = subtotal >= 199 ? 0 : 20;
+  const total = subtotal + deliveryFee;
+
+  document.getElementById("subtotal").textContent = "₹" + subtotal;
+  document.getElementById("deliveryFee").textContent = "₹" + deliveryFee;
+  document.getElementById("total").textContent = "₹" + total;
+}
+
+function inc(idx){
+  const cart = getCart();
+  cart[idx].qty++;
+  saveCart(cart);
+  showToast("Item quantity increased ✅");
+}
+
+function dec(idx){
+  const cart = getCart();
+  cart[idx].qty--;
+  if(cart[idx].qty <= 0){
+    cart.splice(idx, 1);
+    showToast("Item removed 🗑️", "yellow");
+  } else {
+    showToast("Item quantity updated ✅", "yellow");
+  }
+  saveCart(cart);
+}
+
+function removeItem(idx){
+  const cart = getCart();
+  cart.splice(idx, 1);
+  saveCart(cart);
+  showToast("Item removed 🗑️", "red");
+}
+
+function clearCart(){
+  localStorage.removeItem("cart");
+  renderCart();
+  showToast("Cart cleared ✅", "yellow");
+}
+
+function goCheckout(){
+  const cart = getCart();
+  if(cart.length === 0){
+    showToast("Cart is empty ⚠️", "yellow");
+    return;
+  }
   location.href="checkout.html";
 }
+
+renderCart();
 </script>
 
 <div class="footer-space"></div>

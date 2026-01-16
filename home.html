@@ -3,67 +3,156 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>PureDrop • Stores</title>
+  <title>e-Kiraana • Nearby Stores</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="brand">
+      <div class="logo">E</div> e-Kiraana
+    </div>
     <div class="nav-actions">
       <a class="btn outline" href="orders.html">My Orders</a>
-      <button class="btn" onclick="logout()">Logout</button>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
+
+  <!-- Hero -->
   <div class="hero">
-    <h1>Nearby Stores 🛒</h1>
-    <p>Select a store to explore categories and products.</p>
+    <h1>Nearby Kirana Stores 🛒</h1>
+    <p>Select a store to start shopping groceries.</p>
   </div>
 
+  <!-- Search -->
+  <input class="input" id="search" placeholder="Search store name or location..." oninput="renderStores()">
+  <br><br>
+
+  <!-- Stores List -->
   <div class="grid cols-3" id="stores"></div>
+
 </div>
 
+<!-- Toast -->
+<div class="toast" id="toast">Store Selected ✅</div>
+
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
 const user = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+// ✅ Only customer access
 if(!user) location.href="index.html";
+if(role !== "customer"){
+  alert("Only customers can access this page!");
+  location.href="index.html";
+}
 
 function logout(){
   localStorage.clear();
   location.href="index.html";
 }
 
-fetch(API,{method:"POST",body:JSON.stringify({action:"stores"})})
+function showToast(text, color="green"){
+  const t = document.getElementById("toast");
+  t.textContent = text;
+
+  if(color==="red") t.style.background="#ef4444";
+  else if(color==="yellow") t.style.background="#f59e0b";
+  else t.style.background="#16a34a";
+
+  t.style.display="block";
+  setTimeout(()=>{ t.style.display="none"; }, 2200);
+}
+
+let STORES = [];
+
+fetch(API,{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body:JSON.stringify({ action:"stores" })
+})
 .then(r=>r.json())
 .then(rows=>{
-  const box=document.getElementById("stores");
-  box.innerHTML="";
-  rows.slice(1).forEach(s=>{
-    const card=document.createElement("div");
-    card.className="card";
-    card.innerHTML=`
-      <div class="row space">
-        <div>
-          <b style="font-size:18px">${s[1]}</b>
-          <div class="small">${s[2] || ""}</div>
-        </div>
-        <div class="price">${s[3] ? "⭐ "+s[3] : ""}</div>
-      </div>
-      <br>
-      <button class="btn" onclick="openStore('${s[0]}','${s[1]}')">Open Store</button>
-    `;
-    box.appendChild(card);
-  });
+  // store sheet: storeId | storeName | location | rating | imageUrl | vendorUsername
+  STORES = rows.slice(1).map(s=>({
+    id:s[0],
+    name:s[1],
+    location:s[2],
+    rating:s[3],
+    img:s[4]
+  }));
+  renderStores();
+})
+.catch(err=>{
+  console.error(err);
+  document.getElementById("stores").innerHTML =
+    `<div class="card"><b>Server Error</b><div class="small">Check API deployment</div></div>`;
 });
 
-function openStore(id,name){
-  localStorage.setItem("storeId",id);
-  localStorage.setItem("storeName",name);
-  location.href="categories.html";
+function renderStores(){
+  const q = document.getElementById("search").value.toLowerCase();
+  const box = document.getElementById("stores");
+  box.innerHTML = "";
+
+  const filtered = STORES.filter(s =>
+    (s.name + " " + s.location).toLowerCase().includes(q)
+  );
+
+  if(filtered.length === 0){
+    box.innerHTML = `<div class="card"><b>No stores found</b><div class="small">Try different search</div></div>`;
+    return;
+  }
+
+  filtered.forEach(s=>{
+    const d=document.createElement("div");
+    d.className="card";
+    d.style.cursor="pointer";
+
+    d.innerHTML = `
+      <div class="row space">
+        <b style="font-size:18px">${s.name}</b>
+        <div class="price">${s.rating ? "⭐ " + s.rating : ""}</div>
+      </div>
+
+      <div class="small" style="margin-top:6px">${s.location || ""}</div>
+
+      <div style="margin-top:10px">
+        ${
+          s.img
+          ? `<img src="${s.img}" style="width:100%;height:150px;object-fit:cover;border-radius:18px;border:1px solid #e2e8f0;">`
+          : `<div style="height:150px;border-radius:18px;border:1px solid #e2e8f0;background:linear-gradient(135deg,#e0f2fe,#dcfce7);display:grid;place-items:center;font-weight:900;color:#0284c7;">No Image</div>`
+        }
+      </div>
+
+      <br>
+      <button class="btn" onclick="openStore(event,'${s.id}','${s.name}')">Shop Now</button>
+    `;
+
+    // Card click also open store
+    d.onclick = ()=> openStore(null, s.id, s.name);
+
+    box.appendChild(d);
+  });
+}
+
+function openStore(ev, id, name){
+  if(ev) ev.stopPropagation();
+
+  localStorage.setItem("storeId", id);
+  localStorage.setItem("storeName", name);
+
+  showToast("Store Selected ✅");
+
+  setTimeout(()=>{
+    location.href="categories.html";
+  }, 900);
 }
 </script>
 

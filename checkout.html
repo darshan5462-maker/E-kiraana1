@@ -3,71 +3,201 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>PureDrop • Checkout</title>
+  <title>e-Kiraana • Checkout</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
       <a class="btn outline" href="cart.html">Back</a>
+      <a class="btn outline" href="orders.html">My Orders</a>
     </div>
   </div>
 </div>
 
 <div class="container">
+
   <div class="hero">
     <h1>Checkout ✅</h1>
-    <p>Confirm your order (Cash on Delivery).</p>
+    <p>Choose Delivery/Pickup and confirm your grocery order.</p>
   </div>
 
-  <div class="card">
-    <div class="title">Delivery Details</div>
-    <input class="input" id="address" placeholder="Enter delivery address">
-    <br><br>
-    <button class="btn" onclick="placeOrder()">Place Order</button>
+  <div class="grid cols-2">
+    <div class="card">
+      <div class="title">Order Details</div>
+
+      <label class="small"><b>Fulfillment Type</b></label>
+      <select class="input" id="fulfillmentType">
+        <option value="Delivery">Delivery</option>
+        <option value="Pickup">Pickup from Store</option>
+      </select>
+      <br><br>
+
+      <label class="small"><b>Schedule Time</b></label>
+      <select class="input" id="scheduleTime">
+        <option value="">Select time slot</option>
+        <option>09:00 AM - 10:00 AM</option>
+        <option>10:00 AM - 11:00 AM</option>
+        <option>11:00 AM - 12:00 PM</option>
+        <option>12:00 PM - 01:00 PM</option>
+        <option>05:00 PM - 06:00 PM</option>
+        <option>06:00 PM - 07:00 PM</option>
+        <option>07:00 PM - 08:00 PM</option>
+      </select>
+      <br><br>
+
+      <label class="small"><b>Payment Method</b></label>
+      <select class="input" id="payment">
+        <option value="COD">Cash on Delivery (COD)</option>
+        <option value="UPI">UPI</option>
+        <option value="Cash at pickup">Cash at pickup</option>
+      </select>
+
+      <hr style="margin:14px 0">
+
+      <div class="title">Delivery Address</div>
+      <input class="input" id="name" placeholder="Full Name">
+      <br><br>
+      <input class="input" id="phone" placeholder="Phone Number">
+      <br><br>
+      <input class="input" id="address" placeholder="House No / Street / Area">
+      <br><br>
+      <input class="input" id="landmark" placeholder="Landmark (optional)">
+      <br><br>
+      <input class="input" id="pincode" placeholder="Pincode">
+      <br><br>
+
+      <button class="btn" style="width:100%" onclick="placeOrder()">Place Order</button>
+      <p class="small" id="msg" style="margin-top:10px;"></p>
+    </div>
+
+    <div class="card">
+      <div class="title">Order Summary</div>
+      <div id="summary"></div>
+      <hr>
+      <div class="row space">
+        <b>Total Amount</b>
+        <div class="price" id="total">₹0</div>
+      </div>
+    </div>
   </div>
 </div>
 
+<div class="toast" id="toast">Order placed ✅</div>
+
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+const user=localStorage.getItem("user");
+const role=localStorage.getItem("role");
+const storeId=localStorage.getItem("storeId");
+
+if(!user) location.href="index.html";
+if(role!=="customer") location.href="index.html";
+
+function showToast(text,color="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=color==="red"?"#ef4444":color==="yellow"?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",2000);
+}
 
 function cart(){ return JSON.parse(localStorage.getItem("cart")||"[]"); }
 
-function placeOrder(){
-  const address=document.getElementById("address").value.trim();
-  if(!address) return alert("Enter address!");
+function renderSummary(){
+  const c=cart();
+  const box=document.getElementById("summary");
+  let total=0;
+  box.innerHTML="";
+  if(c.length===0){ box.innerHTML="<b>Cart empty</b>"; return; }
 
-  const user=localStorage.getItem("user");
-  const storeId=localStorage.getItem("storeId");
-  const items=cart();
-  const total=items.reduce((a,b)=>a+(b.price*b.qty),0);
+  c.forEach(i=>{
+    total += i.price*i.qty;
+    box.innerHTML += `
+      <div class="row space" style="margin-bottom:10px">
+        <div>
+          <b>${i.name}</b>
+          <div class="small">${i.unit} • Qty: ${i.qty}</div>
+        </div>
+        <b>₹${i.price*i.qty}</b>
+      </div>`;
+  });
+
+  const deliveryFee = total>=199?0:20;
+  const finalTotal = total+deliveryFee;
+
+  box.innerHTML += `<hr>
+    <div class="row space"><div class="small">Items Total</div><b>₹${total}</b></div>
+    <div class="row space" style="margin-top:6px"><div class="small">Delivery Fee</div><b>₹${deliveryFee}</b></div>`;
+  document.getElementById("total").textContent="₹"+finalTotal;
+}
+
+renderSummary();
+
+function placeOrder(){
+  const c=cart();
+  if(c.length===0){ showToast("Cart is empty","yellow"); return; }
+
+  const fulfillmentType=document.getElementById("fulfillmentType").value;
+  const scheduleTime=document.getElementById("scheduleTime").value;
+  const payment=document.getElementById("payment").value;
+
+  const name=document.getElementById("name").value.trim();
+  const phone=document.getElementById("phone").value.trim();
+  const address=document.getElementById("address").value.trim();
+  const landmark=document.getElementById("landmark").value.trim();
+  const pincode=document.getElementById("pincode").value.trim();
+  const msg=document.getElementById("msg");
+
+  msg.textContent="";
+
+  if(!name || !phone || !address || !pincode){
+    msg.textContent="Please fill required address fields!";
+    showToast("Fill address properly","yellow");
+    return;
+  }
+
+  let itemsTotal=c.reduce((a,b)=>a+(b.price*b.qty),0);
+  const deliveryFee=itemsTotal>=199?0:20;
+  const finalTotal=itemsTotal+deliveryFee;
+
+  const fullAddress=`Name:${name}, Phone:${phone}, Address:${address}, Landmark:${landmark||"-"}, Pincode:${pincode}`;
 
   fetch(API,{
     method:"POST",
+    headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({
       action:"placeOrder",
       customer:user,
       storeId:storeId,
-      items:JSON.stringify(items),
-      total: total
+      items:JSON.stringify(c),
+      total:finalTotal,
+      address:fullAddress,
+      fulfillmentType,
+      scheduleTime,
+      payment
     })
   })
   .then(r=>r.json())
   .then(d=>{
     if(d.ok){
+      showToast("Order placed ✅");
       localStorage.removeItem("cart");
-      alert("Order placed ✅");
-      location.href="orders.html";
+      setTimeout(()=>location.href="orders.html",1200);
     }else{
-      alert(d.msg||"Failed");
+      showToast("Order failed","red");
+      msg.textContent=d.msg||"Failed";
     }
+  })
+  .catch(err=>{
+    console.error(err);
+    showToast("Server Error","red");
+    msg.textContent="Server error";
   });
 }
 </script>
-
-<div class="footer-space"></div>
 </body>
 </html>

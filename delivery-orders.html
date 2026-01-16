@@ -3,143 +3,140 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Delivery • Orders</title>
+  <title>e-Kiraana • Delivery Orders</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand">
-      <div class="logo">D</div> Delivery Orders
-    </div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
       <a class="btn outline" href="delivery.html">Back</a>
-      <button class="btn" onclick="logout()">Logout</button>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
-
   <div class="hero">
     <h1>Assigned Orders 🚚</h1>
-    <p>Update order delivery status.</p>
+    <p>Start delivery and mark delivered.</p>
   </div>
 
   <div class="grid cols-2" id="orders"></div>
-
 </div>
 
-<script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+<div class="toast" id="toast">Updated ✅</div>
 
-const deliveryBoy = localStorage.getItem("user");
-const role = localStorage.getItem("role");
+<script>
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
+const deliveryBoy=localStorage.getItem("user");
+const role=localStorage.getItem("role");
 
 if(!deliveryBoy) location.href="index.html";
-if(role !== "delivery"){
-  alert("Access denied! Delivery only.");
-  location.href="index.html";
-}
+if(role!=="delivery"){ alert("Delivery only"); location.href="index.html"; }
 
-function logout(){
-  localStorage.clear();
-  location.href="index.html";
-}
+function logout(){ localStorage.clear(); location.href="index.html"; }
 
-// ✅ Load assigned orders
-function loadOrders(){
-  fetch(API,{
-    method:"POST",
-    body:JSON.stringify({
-      action:"deliveryOrders",
-      deliveryBoy: deliveryBoy
-    })
-  })
-  .then(r=>r.json())
-  .then(rows=>{
-    const box = document.getElementById("orders");
-    box.innerHTML="";
-
-    const list = rows.slice(1).reverse();
-
-    if(list.length===0){
-      box.innerHTML = `<div class="card"><b>No assigned orders.</b><div class="small">Wait for vendor/admin assignment.</div></div>`;
-      return;
-    }
-
-    list.forEach(o=>{
-      // Orders sheet:
-      // 0=orderId 1=customer 2=storeId 3=items 4=total 5=status 6=payment 7=date 8=deliveryBoy 9=address
-
-      const status = o[5];
-
-      const d = document.createElement("div");
-      d.className="card";
-      d.innerHTML=`
-        <b>Order: ${o[0]}</b>
-        <div class="small">Customer: ${o[1]}</div>
-        <div class="small">Store ID: ${o[2]}</div>
-        <div class="small">Address: ${o[9] || "-"}</div>
-
-        <div class="row space" style="margin-top:10px">
-          <div class="price">₹${o[4]}</div>
-          <b style="color:${statusColor(status)}">${status}</b>
-        </div>
-
-        <br>
-        ${buttons(o[0], status)}
-      `;
-      box.appendChild(d);
-    });
-  });
+function showToast(text,color="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=color==="red"?"#ef4444":color==="yellow"?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1800);
 }
 
 function statusColor(status){
-  if(status === "Accepted") return "#f59e0b";
-  if(status === "Out for delivery") return "#2563eb";
-  if(status === "Delivered") return "#16a34a";
+  if(status==="Accepted") return "#2563eb";
+  if(status==="Ready") return "#8b5cf6";
+  if(status==="Out for delivery") return "#0ea5e9";
+  if(status==="Delivered") return "#16a34a";
   return "#6b7280";
 }
 
-function buttons(orderId, status){
-  // ✅ show correct actions based on current status
-  if(status === "Accepted"){
+function buttons(orderId,status){
+  if(status==="Accepted" || status==="Ready"){
     return `<button class="btn" onclick="update('${orderId}','Out for delivery')">🚚 Start Delivery</button>`;
   }
-  if(status === "Out for delivery"){
-    return `<button class="btn" onclick="update('${orderId}','Delivered')">✅ Mark Delivered</button>`;
+  if(status==="Out for delivery"){
+    return `<button class="btn green" onclick="update('${orderId}','Delivered')">✅ Delivered</button>`;
   }
   return `<div class="small">No action available</div>`;
 }
 
-// ✅ Update delivery status
-function update(orderId, status){
+function loadOrders(){
   fetch(API,{
     method:"POST",
-    body:JSON.stringify({
-      action:"deliveryUpdate",
-      orderId: orderId,
-      status: status,
-      deliveryBoy: deliveryBoy
-    })
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"deliveryOrders", deliveryBoy })
+  })
+  .then(r=>r.json())
+  .then(rows=>{
+    const box=document.getElementById("orders");
+    box.innerHTML="";
+    const list=rows.slice(1).reverse();
+
+    if(list.length===0){
+      box.innerHTML=`<div class="card"><b>No assigned orders.</b><div class="small">Wait for assignment.</div></div>`;
+      return;
+    }
+
+    list.forEach(o=>{
+      const status=String(o[5]).trim();
+      const card=document.createElement("div");
+      card.className="card";
+      card.innerHTML=`
+        <div class="row space">
+          <b>Order: ${o[0]}</b>
+          <span style="color:white;background:${statusColor(status)};padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px">${status}</span>
+        </div>
+
+        <div class="small" style="margin-top:8px">Customer: <b>${o[1]}</b></div>
+        <div class="small">Address: ${o[9] || "-"}</div>
+
+        <hr>
+
+        <div class="row space">
+          <div class="price">₹${o[4]}</div>
+          <b>${status}</b>
+        </div>
+
+        <br>
+        ${buttons(o[0],status)}
+      `;
+      box.appendChild(card);
+    });
+  })
+  .catch(err=>{
+    console.error(err);
+    showToast("Server Error ❌","red");
+  });
+}
+
+function update(orderId,status){
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"deliveryUpdate", orderId, status, deliveryBoy })
   })
   .then(r=>r.json())
   .then(d=>{
     if(d.ok){
-      alert("Updated to: " + status);
+      showToast("Updated ✅");
       loadOrders();
     }else{
-      alert(d.msg || "Failed");
+      showToast(d.msg || "Failed ❌","red");
     }
+  })
+  .catch(err=>{
+    console.error(err);
+    showToast("Server Error ❌","red");
   });
 }
 
 loadOrders();
 </script>
-
-<div class="footer-space"></div>
 </body>
 </html>

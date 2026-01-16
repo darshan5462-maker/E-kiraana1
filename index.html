@@ -3,71 +3,131 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>PureDrop • Login</title>
+  <title>e-Kiraana • Login</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
     <div class="brand">
-      <div class="logo">P</div> PureDrop
+      <div class="logo">E</div> e-Kiraana
+    </div>
+    <div class="nav-actions">
+      <a class="btn outline" href="register.html">Create Account</a>
     </div>
   </div>
 </div>
 
 <div class="container">
+
   <div class="hero">
-    <h1>Welcome back 👋</h1>
-    <p>Login and order groceries from nearby stores.</p>
+    <h1>Welcome to e-Kiraana 🛒</h1>
+    <p>Order groceries from nearby kirana stores. Fast delivery. Best prices.</p>
   </div>
 
-  <div class="card">
-    <div class="title">Login</div>
+  <div class="grid cols-2">
+    <!-- Login Card -->
+    <div class="card">
+      <div class="title">Login</div>
 
-    <input class="input" id="username" placeholder="Username">
-    <br><br>
-    <input class="input" id="password" type="password" placeholder="Password">
-    <br><br>
+      <input class="input" id="username" placeholder="Username">
+      <br><br>
+      <input class="input" id="password" type="password" placeholder="Password">
+      <br><br>
 
-    <button class="btn" onclick="login()">Login</button>
-    <a class="btn outline" href="register.html">Create Account</a>
+      <button class="btn" onclick="login()">Login</button>
+      <a class="btn outline" href="register.html">New user? Register</a>
 
-    <p class="small" id="msg" style="margin-top:12px;"></p>
+      <p class="small" id="msg" style="margin-top:12px;"></p>
+    </div>
+
+    <!-- Info Card -->
+    <div class="card">
+      <div class="title">Why e-Kiraana?</div>
+
+      <div class="small" style="font-size:14px;line-height:1.7">
+        ✅ Nearby kirana stores <br>
+        ✅ Fresh groceries everyday <br>
+        ✅ Quick delivery partners <br>
+        ✅ Secure order tracking <br>
+        ✅ Vendor + Delivery + Admin system <br>
+      </div>
+
+      <hr>
+
+      <b style="display:block;margin-bottom:8px;">Demo Login Tip:</b>
+      <div class="small">
+        Create account first, then login using same username/password.
+      </div>
+    </div>
   </div>
+
 </div>
 
+<!-- ✅ Toast -->
+<div class="toast" id="toast">Login successful ✅</div>
+
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
+const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
+function showToast(text, color="green"){
+  const t = document.getElementById("toast");
+  t.textContent = text;
+
+  // change toast color
+  if(color==="red") t.style.background = "#ef4444";
+  else if(color==="yellow") t.style.background = "#f59e0b";
+  else t.style.background = "#16a34a";
+
+  t.style.display = "block";
+  setTimeout(()=>{ t.style.display="none"; }, 2300);
+}
 
 function login(){
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
   const msg = document.getElementById("msg");
 
+  msg.textContent = "";
+
   if(!username || !password){
-    msg.textContent = "Enter username and password.";
+    msg.textContent = "Please enter username and password.";
     return;
   }
 
   fetch(API,{
     method:"POST",
+    headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({ action:"login", username, password })
   })
   .then(r=>r.json())
   .then(d=>{
     if(d.ok){
+      // ✅ store session
       localStorage.setItem("user", d.user);
       localStorage.setItem("role", d.role);
 
-      if(d.role === "vendor"){
-        location.href = "vendor.html";
-      } else {
-        location.href = "home.html";
-      }
+      showToast("Login successful ✅");
+
+      // ✅ redirect by role
+      setTimeout(()=>{
+        if(d.role === "vendor") location.href="vendor.html";
+        else if(d.role === "delivery") location.href="delivery.html";
+        else if(d.role === "admin") location.href="admin.html";
+        else location.href="home.html";
+      }, 1200);
+
     } else {
+      showToast("Invalid username or password ❌", "red");
       msg.textContent = d.msg || "Login failed.";
     }
+  })
+  .catch(err=>{
+    console.error(err);
+    showToast("Server Error ❌", "red");
+    msg.textContent = "Server error! Check API deployment.";
   });
 }
 </script>

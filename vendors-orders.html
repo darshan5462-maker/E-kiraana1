@@ -3,71 +3,275 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Vendor • Orders</title>
+  <title>e-Kiraana • Shop Orders</title>
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    .statusBadge{
+      padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;color:white;
+    }
+    .itemsBox{
+      margin-top:10px;padding:10px;border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc;
+    }
+    .line{
+      display:grid;
+      grid-template-columns:1fr 90px 80px;
+      gap:10px;
+      align-items:center;
+      padding:7px 0;
+      border-bottom:1px dashed #e2e8f0;
+      font-size:14px;
+    }
+    .line:last-child{border-bottom:none;}
+    .qtyinp{
+      padding:9px 10px;border:1px solid #e2e8f0;border-radius:12px;width:100%;
+      outline:none;
+    }
+  </style>
 </head>
 <body>
 
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">V</div> Vendor Orders</div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
       <a class="btn outline" href="vendor.html">Back</a>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
   <div class="hero">
-    <h1>Customer Orders 📦</h1>
-    <p>Accept / Reject orders from customers.</p>
+    <h1>Shop Orders 📦</h1>
+    <p>Accept, update items, set ready time, and assign delivery partner.</p>
   </div>
 
   <div class="grid cols-2" id="orders"></div>
 </div>
 
+<div class="toast" id="toast">Updated ✅</div>
+
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
-const vendor = localStorage.getItem("user");
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
+const vendor=localStorage.getItem("user");
+const role=localStorage.getItem("role");
+
 if(!vendor) location.href="index.html";
+if(role!=="vendor"){ alert("Vendor only"); location.href="index.html"; }
 
-fetch(API,{method:"POST",body:JSON.stringify({action:"vendorOrders", vendor})})
-.then(r=>r.json())
-.then(rows=>{
-  const box=document.getElementById("orders");
-  box.innerHTML="";
-  rows.slice(1).reverse().forEach(o=>{
-    const d=document.createElement("div");
-    d.className="card";
-    d.innerHTML=`
-      <b>Order: ${o[0]}</b>
-      <div class="small">Customer: ${o[1]}</div>
-      <div class="small">Store ID: ${o[2]}</div>
-      <div class="row space" style="margin-top:10px">
-        <div class="price">₹${o[4]}</div>
-        <b>${o[5]}</b>
-      </div>
-      <br>
-      <button class="btn" onclick="updateOrder('${o[0]}','Accepted')">✅ Accept</button>
-      <button class="btn outline" onclick="updateOrder('${o[0]}','Rejected')">❌ Reject</button>
-    `;
-    box.appendChild(d);
-  });
-});
+function logout(){ localStorage.clear(); location.href="index.html"; }
 
-function updateOrder(orderId,status){
-  fetch(API,{
+function showToast(text,color="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=color==="red"?"#ef4444":color==="yellow"?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1800);
+}
+
+function statusColor(s){
+  if(s==="Pending") return "#f59e0b";
+  if(s==="Accepted") return "#2563eb";
+  if(s==="Ready") return "#8b5cf6";
+  if(s==="Out for delivery") return "#0ea5e9";
+  if(s==="Delivered") return "#16a34a";
+  if(s==="Rejected") return "#ef4444";
+  return "#6b7280";
+}
+
+let DELIVERY_USERS=[];
+
+function loadDeliveryPartners(){
+  return fetch(API,{
     method:"POST",
-    body:JSON.stringify({action:"updateOrder", orderId, status})
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"adminUsers" })
   })
   .then(r=>r.json())
-  .then(d=>{
-    if(d.ok){
-      alert("Order "+status);
-      location.reload();
-    } else alert(d.msg||"Failed");
+  .then(rows=>{
+    DELIVERY_USERS=rows.slice(1)
+      .filter(u=>String(u[3]).trim()==="delivery")
+      .map(u=>String(u[1]).trim());
+  })
+  .catch(()=>DELIVERY_USERS=[]);
+}
+
+function loadOrders(){
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"vendorOrders", vendor })
+  })
+  .then(r=>r.json())
+  .then(rows=>{
+    const box=document.getElementById("orders");
+    box.innerHTML="";
+    const list=rows.slice(1).reverse();
+
+    if(list.length===0){
+      box.innerHTML=`<div class="card"><b>No orders yet.</b><div class="small">Wait for customer orders.</div></div>`;
+      return;
+    }
+
+    list.forEach(o=>{
+      const orderId=o[0];
+      const status=String(o[5]).trim();
+      const deliveryBoy=String(o[8]||"").trim();
+      const fulfillment=String(o[10]||"").trim();
+      const schedule=String(o[11]||"").trim();
+      const readyTime=String(o[12]||"").trim();
+
+      let items=[];
+      try{ items=JSON.parse(o[3]||"[]"); }catch(e){ items=[]; }
+
+      const opts=[`<option value="">Select Delivery Partner</option>`]
+        .concat(DELIVERY_USERS.map(u=>`<option value="${u}" ${u===deliveryBoy?"selected":""}>${u}</option>`))
+        .join("");
+
+      const itemsHTML = items.length ? items.map((it,idx)=>`
+        <div class="line">
+          <div>
+            <b>${it.name}</b>
+            <div class="small">${it.unit || ""}</div>
+          </div>
+          <div class="small">₹${it.price || ""}</div>
+          <input class="qtyinp" id="qty_${orderId}_${idx}" type="number" min="0" value="${it.qty}">
+        </div>
+      `).join("") : `<div class="small">No items data</div>`;
+
+      const card=document.createElement("div");
+      card.className="card";
+      card.innerHTML=`
+        <div class="row space">
+          <b style="font-size:16px">Order: ${orderId}</b>
+          <span class="statusBadge" style="background:${statusColor(status)}">${status}</span>
+        </div>
+
+        <div class="small" style="margin-top:8px">Customer: <b>${o[1]}</b></div>
+        <div class="small">Fulfillment: <b>${fulfillment || "Delivery"}</b></div>
+        <div class="small">Schedule: <b>${schedule || "-"}</b></div>
+        <div class="small">Ready Time: <b>${readyTime || "-"}</b></div>
+
+        <div class="itemsBox">
+          <b>Edit Item Qty</b>
+          <div class="small">Set 0 to remove item</div>
+          ${itemsHTML}
+          <button class="btn outline" style="width:100%;margin-top:10px"
+            onclick='saveItems("${orderId}", ${JSON.stringify(items).replace(/"/g,"&quot;")})'>
+            💾 Save Item Changes
+          </button>
+        </div>
+
+        <hr>
+
+        <div class="row space">
+          <b>Total</b>
+          <div class="price">₹${o[4]}</div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn green" onclick="setStatus('${orderId}','Accepted')">✅ Accept</button>
+          <button class="btn danger" onclick="setStatus('${orderId}','Rejected')">❌ Reject</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <label class="small"><b>Set Ready Time</b></label>
+          <input class="input" id="ready_${orderId}" placeholder="Ex: 15 mins / 6:30 PM" value="${readyTime}">
+          <button class="btn outline" style="width:100%;margin-top:8px" onclick="setReadyTime('${orderId}')">🕒 Save Ready Time</button>
+          <button class="btn" style="width:100%;margin-top:8px" onclick="markReady('${orderId}')">✅ Mark READY</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <label class="small"><b>Assign Delivery Partner</b></label>
+          <select class="input" onchange="assignDelivery('${orderId}', this.value)">
+            ${opts}
+          </select>
+        </div>
+
+        <div class="small" style="margin-top:10px">
+          Assigned Delivery: <b>${deliveryBoy || "Not Assigned"}</b>
+        </div>
+      `;
+
+      box.appendChild(card);
+    });
+  })
+  .catch(err=>{
+    console.error(err);
+    showToast("Server error ❌","red");
   });
 }
+
+function setStatus(orderId,status){
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"updateOrder", orderId, status })
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ showToast("Order updated ✅"); loadOrders(); }
+    else showToast(d.msg||"Failed","red");
+  });
+}
+
+function assignDelivery(orderId,deliveryBoy){
+  if(!deliveryBoy){ showToast("Select delivery partner","yellow"); return; }
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"assignDelivery", orderId, deliveryBoy })
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ showToast("Assigned ✅"); loadOrders(); }
+    else showToast(d.msg||"Failed","red");
+  });
+}
+
+function setReadyTime(orderId){
+  const readyTime=document.getElementById("ready_"+orderId).value.trim();
+  if(!readyTime){ showToast("Enter ready time","yellow"); return; }
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"setReadyTime", orderId, readyTime })
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ showToast("Ready time saved ✅"); loadOrders(); }
+    else showToast(d.msg||"Failed","red");
+  });
+}
+
+function markReady(orderId){
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ action:"markReady", orderId })
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ showToast("Marked READY ✅"); loadOrders(); }
+    else showToast(d.msg||"Failed","red");
+  });
+}
+
+function saveItems(orderId, items){
+  const newItems = items.map((it, idx)=>{
+    const q = Number(document.getElementById(`qty_${orderId}_${idx}`).value || 0);
+    return {...it, qty:q};
+  }).filter(x=>x.qty > 0);
+
+  fetch(API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      action:"vendorUpdateItems",
+      orderId,
+      items: JSON.stringify(newItems)
+    })
+  }).then(r=>r.json()).then(d=>{
+    if(d.ok){ showToast("Items updated ✅"); loadOrders(); }
+    else showToast(d.msg||"Failed","red");
+  });
+}
+
+loadDeliveryPartners().then(loadOrders);
 </script>
 
 <div class="footer-space"></div>

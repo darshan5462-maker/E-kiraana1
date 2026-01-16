@@ -3,45 +3,86 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Vendor • Dashboard</title>
+  <title>e-Kiraana • Shop Owner Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">V</div> Vendor Panel</div>
+    <div class="brand">
+      <div class="logo">E</div> e-Kiraana
+    </div>
     <div class="nav-actions">
-      <button class="btn" onclick="logout()">Logout</button>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
+
   <div class="hero">
-    <h1>Vendor Dashboard 🏪</h1>
-    <p>Manage stores, products and customer orders.</p>
+    <h1>Shop Owner Panel 🏪</h1>
+    <p>Manage your store, groceries and customer orders.</p>
   </div>
 
   <div class="grid cols-3">
     <a class="card" href="vendor-stores.html">
-      <b>My Stores</b>
-      <div class="small">View & manage your stores</div>
+      <b style="font-size:18px">🏪 My Stores</b>
+      <div class="small">Create & manage your kirana stores</div>
     </a>
 
     <a class="card" href="vendor-products.html">
-      <b>Products</b>
-      <div class="small">Add products to store</div>
+      <b style="font-size:18px">🧺 Add Products</b>
+      <div class="small">Add grocery items with images</div>
     </a>
 
     <a class="card" href="vendor-orders.html">
-      <b>Orders</b>
-      <div class="small">Accept / Reject orders</div>
+      <b style="font-size:18px">📦 Orders</b>
+      <div class="small">Accept / Reject & assign delivery partner</div>
     </a>
+
+    <div class="card">
+      <b style="font-size:18px">👤 Logged in as</b>
+      <div class="small" id="me">-</div>
+      <div class="small" id="role">-</div>
+      <hr>
+      <div class="small">
+        ✅ Tip: First create store then add products.
+      </div>
+    </div>
+
+    <a class="card" href="home.html">
+      <b style="font-size:18px">🛒 Customer View</b>
+      <div class="small">For testing: open customer shopping</div>
+    </a>
+
+    <div class="card">
+      <b style="font-size:18px">📊 Business Tips</b>
+      <div class="small">
+        ✔ Keep products updated<br>
+        ✔ Add good images<br>
+        ✔ Deliver fast orders<br>
+      </div>
+    </div>
   </div>
+
 </div>
 
 <script>
+const user = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+
+if(!user) location.href="index.html";
+if(role !== "vendor"){
+  alert("Access denied! Only shop owners (vendor).");
+  location.href="index.html";
+}
+
+document.getElementById("me").textContent = user;
+document.getElementById("role").textContent = "Role: " + role;
+
 function logout(){
   localStorage.clear();
   location.href="index.html";

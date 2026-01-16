@@ -3,56 +3,170 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>PureDrop • Orders</title>
+  <title>e-Kiraana • My Orders</title>
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    .statusBadge{
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+      display:inline-block;
+      color:white;
+    }
+    .track{
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+    .step{
+      flex:1;
+      min-width:125px;
+      padding:10px;
+      border-radius:14px;
+      border:1px solid #e2e8f0;
+      background:#fff;
+      font-weight:900;
+      font-size:13px;
+      text-align:center;
+    }
+    .done{ background:#dcfce7; border-color:#86efac; color:#166534; }
+    .active{ background:#e0f2fe; border-color:#7dd3fc; color:#075985; }
+    .pending{ background:#fff7ed; border-color:#fdba74; color:#9a3412; }
+  </style>
 </head>
 <body>
 
 <div class="navbar">
   <div class="container inner">
-    <div class="brand"><div class="logo">P</div> PureDrop</div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
       <a class="btn outline" href="home.html">Back</a>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
   <div class="hero">
-    <h1>Your Orders 📦</h1>
-    <p>Track your recent orders.</p>
+    <h1>My Orders 📦</h1>
+    <p>Track your order status with live progress.</p>
   </div>
 
   <div class="grid cols-2" id="orders"></div>
 </div>
 
+<div class="toast" id="toast">Orders loaded ✅</div>
+
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzk3E-2rVcZA_TqdjsEq94nQjynW9af6K_me17m-hMWFRVDY07DJuHsKsAFKGnnHDA/exec";
-const user = localStorage.getItem("user");
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+const user=localStorage.getItem("user");
+const role=localStorage.getItem("role");
+
 if(!user) location.href="index.html";
+if(role!=="customer"){ alert("Only customers"); location.href="index.html"; }
+
+function logout(){ localStorage.clear(); location.href="index.html"; }
+
+function showToast(text,color="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=color==="red"?"#ef4444":color==="yellow"?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1800);
+}
+
+function statusColor(s){
+  if(s==="Pending") return "#f59e0b";
+  if(s==="Accepted") return "#2563eb";
+  if(s==="Ready") return "#8b5cf6";
+  if(s==="Out for delivery") return "#0ea5e9";
+  if(s==="Delivered") return "#16a34a";
+  if(s==="Rejected") return "#ef4444";
+  return "#6b7280";
+}
+
+function stepClass(step,status){
+  const order=["Pending","Accepted","Ready","Out for delivery","Delivered"];
+  const ci=order.indexOf(status);
+  const si=order.indexOf(step);
+
+  if(status==="Rejected") return "pending";
+  if(si < ci) return "done";
+  if(si === ci) return "active";
+  return "pending";
+}
 
 fetch(API,{
   method:"POST",
-  body:JSON.stringify({action:"orders", customer:user})
+  headers:{ "Content-Type":"application/json" },
+  body:JSON.stringify({ action:"orders", customer:user })
 })
 .then(r=>r.json())
 .then(rows=>{
   const box=document.getElementById("orders");
   box.innerHTML="";
-  rows.slice(1).reverse().forEach(o=>{
+
+  const list=rows.slice(1).reverse();
+
+  if(list.length===0){
+    box.innerHTML=`<div class="card"><b>No orders yet.</b><div class="small">Start shopping from store.</div></div>`;
+    return;
+  }
+
+  list.forEach(o=>{
+    // 0=orderId 1=customer 2=storeId 3=items 4=total 5=status 6=payment 7=date
+    // 8=deliveryBoy 9=address 10=fulfillmentType 11=scheduleTime 12=readyTime
+    const status=String(o[5]).trim();
+    const deliveryBoy=String(o[8]||"").trim();
+    const fulfillment=String(o[10]||"").trim();
+    const schedule=String(o[11]||"").trim();
+    const readyTime=String(o[12]||"").trim();
+
+    const date=o[7] ? new Date(o[7]).toLocaleString() : "-";
+
     const d=document.createElement("div");
     d.className="card";
     d.innerHTML=`
-      <b>Order: ${o[0]}</b>
-      <div class="small">Store ID: ${o[2]}</div>
-      <div class="small">Payment: ${o[6]}</div>
-      <div class="row space" style="margin-top:10px">
-        <div class="price">₹${o[4]}</div>
-        <b style="color:${o[5]==='Accepted'?'#16a34a':o[5]==='Rejected'?'#ef4444':'#f59e0b'}">${o[5]}</b>
+      <div class="row space">
+        <b style="font-size:16px">Order: ${o[0]}</b>
+        <span class="statusBadge" style="background:${statusColor(status)}">${status}</span>
       </div>
+
+      <div class="small" style="margin-top:8px">Date: ${date}</div>
+      <div class="small">Store ID: ${o[2]}</div>
+      <div class="small">Fulfillment: <b>${fulfillment || "Delivery"}</b></div>
+      <div class="small">Schedule Time: <b>${schedule || "-"}</b></div>
+      <div class="small">Ready Time: <b>${readyTime || "-"}</b></div>
+      <div class="small">Delivery Partner: <b>${deliveryBoy || "Not Assigned"}</b></div>
+
+      <hr>
+
+      <div class="row space">
+        <b>Total</b>
+        <div class="price">₹${o[4]}</div>
+      </div>
+
+      <div class="track">
+        <div class="step ${stepClass("Pending",status)}">1. Pending</div>
+        <div class="step ${stepClass("Accepted",status)}">2. Accepted</div>
+        <div class="step ${stepClass("Ready",status)}">3. Ready</div>
+        <div class="step ${stepClass("Out for delivery",status)}">4. Out for delivery</div>
+        <div class="step ${stepClass("Delivered",status)}">5. Delivered</div>
+      </div>
+
+      ${status==="Rejected" ? `<div style="margin-top:12px;font-weight:900;color:#ef4444">❌ Rejected by shop</div>` : ""}
     `;
     box.appendChild(d);
   });
+
+  showToast("Orders loaded ✅");
+})
+.catch(err=>{
+  console.error(err);
+  showToast("Server error ❌","red");
 });
 </script>
 
