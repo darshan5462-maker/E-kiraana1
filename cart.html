@@ -5,197 +5,221 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>e-Kiraana • Cart</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .qtyRow{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .qtyBtn{width:38px;height:38px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;font-weight:900;cursor:pointer}
+    .qtyNum{min-width:28px;text-align:center;font-weight:900}
+    .cartLine{border-bottom:1px dashed #e2e8f0;padding-bottom:14px;margin-bottom:14px}
+    .summary{display:grid;gap:8px}
+    .sumRow{display:flex;justify-content:space-between;font-weight:800}
+    .sumRow .small{font-weight:700}
+    .couponRow{display:flex;gap:10px;margin-top:10px}
+  </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand">
-      <div class="logo">E</div> e-Kiraana
-    </div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
-      <a class="btn outline" href="categories.html">Back</a>
-      <a class="btn outline" href="orders.html">My Orders</a>
+      <a class="btn outline" href="categories.html">Shop More</a>
+      <a class="btn outline" href="orders.html">Orders</a>
     </div>
   </div>
 </div>
 
 <div class="container">
-
   <div class="hero">
-    <h1>Your Cart 🧺</h1>
-    <p>Review groceries and proceed to checkout.</p>
+    <h1>My Cart 🛒</h1>
+    <p>Update quantities and checkout.</p>
   </div>
 
   <div class="grid cols-2">
-    <!-- Items -->
+    <!-- Cart Items -->
     <div class="card">
-      <div class="title">Cart Items</div>
-      <div id="items"></div>
+      <div class="title">Items</div>
+      <div id="cartItems"></div>
+      <div id="emptyBox" class="small" style="display:none;margin-top:10px">
+        Your cart is empty. <a href="categories.html"><b>Start shopping →</b></a>
+      </div>
     </div>
 
     <!-- Summary -->
     <div class="card">
       <div class="title">Bill Summary</div>
 
-      <div class="row space">
-        <div class="small">Items Total</div>
-        <b id="subtotal">₹0</b>
-      </div>
-
-      <div class="row space" style="margin-top:8px">
-        <div class="small">Delivery Fee</div>
-        <b id="deliveryFee">₹0</b>
+      <div class="couponRow">
+        <input class="input" id="coupon" placeholder="Coupon (TRY: SAVE10)" />
+        <button class="btn outline" onclick="applyCoupon()">Apply</button>
       </div>
 
       <hr>
 
-      <div class="row space">
-        <b>Total Amount</b>
-        <div class="price" id="total">₹0</div>
+      <div class="summary">
+        <div class="sumRow"><span class="small">Subtotal</span><span id="subTotal">₹0</span></div>
+        <div class="sumRow"><span class="small">Delivery Fee</span><span id="deliveryFee">₹0</span></div>
+        <div class="sumRow"><span class="small">Discount</span><span id="discount">-₹0</span></div>
+        <hr>
+        <div class="sumRow" style="font-size:18px">
+          <span>Total</span>
+          <span id="grandTotal">₹0</span>
+        </div>
       </div>
 
       <br>
       <button class="btn" style="width:100%" onclick="goCheckout()">Proceed to Checkout</button>
-      <button class="btn outline" style="width:100%;margin-top:10px" onclick="clearCart()">Clear Cart</button>
-
-      <p class="small" style="margin-top:10px">
-        ✅ Payment: Cash on Delivery (COD)
-      </p>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="clearCart()">Clear Cart</button>
     </div>
   </div>
-
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast">Updated cart ✅</div>
+<div class="toast" id="toast">Updated ✅</div>
 
 <script>
-const user = localStorage.getItem("user");
-const role = localStorage.getItem("role");
+const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
 
-if(!user) location.href="index.html";
-if(role !== "customer"){
-  alert("Only customers can access this page!");
-  location.href="index.html";
+/* GET helper (not used here but kept for standard) */
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
 }
 
-function showToast(text, color="green"){
-  const t = document.getElementById("toast");
-  t.textContent = text;
-
-  if(color==="red") t.style.background="#ef4444";
-  else if(color==="yellow") t.style.background="#f59e0b";
+function showToast(text, type="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  if(type==="red") t.style.background="#ef4444";
+  else if(type==="yellow") t.style.background="#f59e0b";
   else t.style.background="#16a34a";
-
   t.style.display="block";
-  setTimeout(()=>{ t.style.display="none"; }, 1700);
+  setTimeout(()=>t.style.display="none",2000);
 }
+
+let COUPON_DISCOUNT = 0;
 
 function getCart(){
   return JSON.parse(localStorage.getItem("cart") || "[]");
 }
-function saveCart(c){
-  localStorage.setItem("cart", JSON.stringify(c));
-  renderCart();
+function setCart(cart){
+  localStorage.setItem("cart", JSON.stringify(cart));
+}
+
+function calcSubtotal(cart){
+  return cart.reduce((sum,i)=> sum + (Number(i.price||0) * Number(i.qty||1)), 0);
+}
+
+function deliveryFee(subtotal){
+  // ✅ professional fee rules
+  if(subtotal === 0) return 0;
+  if(subtotal >= 499) return 0;
+  return 25;
 }
 
 function renderCart(){
   const cart = getCart();
-  const box = document.getElementById("items");
+  const box = document.getElementById("cartItems");
+  const empty = document.getElementById("emptyBox");
+  box.innerHTML="";
 
   if(cart.length === 0){
-    box.innerHTML = `<b>Your cart is empty.</b><div class="small">Add groceries from products page.</div>`;
-    document.getElementById("subtotal").textContent="₹0";
-    document.getElementById("deliveryFee").textContent="₹0";
-    document.getElementById("total").textContent="₹0";
+    empty.style.display="block";
+    updateSummary();
     return;
   }
+  empty.style.display="none";
 
-  let subtotal = 0;
-  let html = "";
-
-  cart.forEach((i, idx)=>{
-    subtotal += (i.price * i.qty);
-
-    html += `
-      <div class="product" style="margin-bottom:12px">
-        <div class="imgbox" style="width:70px;height:70px">
-          ${
-            i.img
-            ? `<img src="${i.img}" alt="${i.name}">`
-            : `<div style="width:100%;height:100%;display:grid;place-items:center;font-weight:900;color:#0284c7;">No Img</div>`
-          }
+  cart.forEach((p, idx)=>{
+    box.innerHTML += `
+      <div class="cartLine">
+        <div class="row space">
+          <b>${p.productName}</b>
+          <button class="btn danger" style="padding:8px 12px" onclick="removeItem(${idx})">Remove</button>
         </div>
-
-        <div style="flex:1">
-          <b style="font-size:16px">${i.name}</b>
-          <div class="small">${i.brand || ""} • ${i.unit}</div>
-
-          <div class="row space" style="margin-top:10px">
-            <div class="price">₹${i.price * i.qty}</div>
-
-            <div class="qty">
-              <button class="qbtn" onclick="dec(${idx})">-</button>
-              <b>${i.qty}</b>
-              <button class="qbtn" onclick="inc(${idx})">+</button>
-              <button class="qbtn" onclick="removeItem(${idx})" title="Remove">🗑️</button>
-            </div>
+        <div class="small">${p.brand || "e-Kiraana"} • ${p.unit || ""}</div>
+        <div class="row space" style="margin-top:10px">
+          <div class="price">₹${p.price}</div>
+          <div class="qtyRow">
+            <button class="qtyBtn" onclick="qtyMinus(${idx})">-</button>
+            <div class="qtyNum">${p.qty || 1}</div>
+            <button class="qtyBtn" onclick="qtyPlus(${idx})">+</button>
           </div>
         </div>
       </div>
-      <hr>
     `;
   });
 
-  box.innerHTML = html;
-
-  // ✅ delivery fee (optional rule)
-  const deliveryFee = subtotal >= 199 ? 0 : 20;
-  const total = subtotal + deliveryFee;
-
-  document.getElementById("subtotal").textContent = "₹" + subtotal;
-  document.getElementById("deliveryFee").textContent = "₹" + deliveryFee;
-  document.getElementById("total").textContent = "₹" + total;
+  updateSummary();
 }
 
-function inc(idx){
+function qtyPlus(i){
   const cart = getCart();
-  cart[idx].qty++;
-  saveCart(cart);
-  showToast("Item quantity increased ✅");
+  cart[i].qty = (cart[i].qty || 1) + 1;
+  setCart(cart);
+  renderCart();
+  showToast("Quantity updated ✅");
 }
 
-function dec(idx){
+function qtyMinus(i){
   const cart = getCart();
-  cart[idx].qty--;
-  if(cart[idx].qty <= 0){
-    cart.splice(idx, 1);
-    showToast("Item removed 🗑️", "yellow");
-  } else {
-    showToast("Item quantity updated ✅", "yellow");
-  }
-  saveCart(cart);
+  cart[i].qty = (cart[i].qty || 1) - 1;
+  if(cart[i].qty <= 0) cart.splice(i,1);
+  setCart(cart);
+  renderCart();
+  showToast("Quantity updated ✅");
 }
 
-function removeItem(idx){
+function removeItem(i){
   const cart = getCart();
-  cart.splice(idx, 1);
-  saveCart(cart);
-  showToast("Item removed 🗑️", "red");
+  cart.splice(i,1);
+  setCart(cart);
+  renderCart();
+  showToast("Removed ❌","yellow");
 }
 
 function clearCart(){
+  if(!confirm("Clear cart?")) return;
   localStorage.removeItem("cart");
+  COUPON_DISCOUNT = 0;
   renderCart();
-  showToast("Cart cleared ✅", "yellow");
+  showToast("Cart cleared ✅");
+}
+
+function applyCoupon(){
+  const code = document.getElementById("coupon").value.trim().toUpperCase();
+  const cart = getCart();
+  const subtotal = calcSubtotal(cart);
+
+  COUPON_DISCOUNT = 0;
+
+  if(code === "SAVE10" && subtotal >= 199){
+    COUPON_DISCOUNT = Math.round(subtotal * 0.10);
+    showToast("Coupon applied ✅");
+  } else if(code){
+    showToast("Invalid coupon ❌","red");
+  } else {
+    showToast("Enter coupon code","yellow");
+  }
+  updateSummary();
+}
+
+function updateSummary(){
+  const cart = getCart();
+  const subtotal = calcSubtotal(cart);
+  const fee = deliveryFee(subtotal);
+  const discount = COUPON_DISCOUNT;
+  const total = Math.max(0, subtotal + fee - discount);
+
+  document.getElementById("subTotal").textContent = "₹" + subtotal;
+  document.getElementById("deliveryFee").textContent = "₹" + fee;
+  document.getElementById("discount").textContent = "-₹" + discount;
+  document.getElementById("grandTotal").textContent = "₹" + total;
+
+  localStorage.setItem("checkout_total", String(total));
 }
 
 function goCheckout(){
   const cart = getCart();
   if(cart.length === 0){
-    showToast("Cart is empty ⚠️", "yellow");
+    showToast("Cart is empty ⚠️","yellow");
     return;
   }
   location.href="checkout.html";

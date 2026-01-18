@@ -30,7 +30,7 @@
   <div class="card">
     <div class="title">Register</div>
 
-    <input class="input" id="username" placeholder="Enter username">
+    <input class="input" id="username" placeholder="Enter username / Phone">
     <br><br>
 
     <input class="input" id="password" type="password" placeholder="Create password">
@@ -60,15 +60,13 @@
 <div class="toast" id="toast">Account created successfully ✅</div>
 
 <script>
-/* ✅ Keep SAME API in all pages */
+/* ✅ PUT YOUR doGet Web App URL here */
 const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
 
-/* ✅ FIX: No headers => No CORS */
-function api(payload){
-  return fetch(API,{
-    method:"POST",
-    body: JSON.stringify(payload)
-  }).then(r=>r.json());
+/* ✅ GET API helper (CORS SAFE) */
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r => r.json());
 }
 
 function showToast(text, color="green"){
@@ -80,7 +78,7 @@ function showToast(text, color="green"){
   else t.style.background="#16a34a";
 
   t.style.display="block";
-  setTimeout(()=>{ t.style.display="none"; }, 2300);
+  setTimeout(()=> t.style.display="none", 2300);
 }
 
 function register(){
@@ -89,34 +87,37 @@ function register(){
   const phone = document.getElementById("phone").value.trim();
   const role = document.getElementById("role").value;
   const msg = document.getElementById("msg");
-
   msg.textContent = "";
 
   if(!username || !password){
     msg.textContent = "Username and password required!";
-    showToast("Fill required fields ⚠️","yellow");
+    showToast("Fill required fields ⚠️", "yellow");
     return;
   }
 
   api({ action:"register", username, password, role, phone })
-  .then(data=>{
-    if(data.ok){
-      showToast("Account created successfully ✅");
+  .then(d=>{
+    console.log("REGISTER:", d);
 
-      document.getElementById("username").value="";
-      document.getElementById("password").value="";
-      document.getElementById("phone").value="";
+    if(d.ok){
+      showToast("Account created successfully ✅");
+      msg.textContent = "";
+
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+      document.getElementById("phone").value = "";
 
       setTimeout(()=> location.href="index.html", 1300);
+
     } else {
-      msg.textContent = data.msg || "Registration failed!";
-      showToast(data.msg || "Register failed ❌","red");
+      msg.textContent = d.msg || "Registration failed!";
+      showToast(d.msg || "Register failed ❌", "red");
     }
   })
   .catch(err=>{
     console.error(err);
-    msg.textContent = "Server error! Check Apps Script deployment.";
-    showToast("Server Error ❌","red");
+    msg.textContent = "API Error! Check deployment.";
+    showToast("Server error ❌", "red");
   });
 }
 </script>

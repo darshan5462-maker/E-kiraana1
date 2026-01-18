@@ -3,77 +3,126 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Admin • Dashboard</title>
+  <title>e-Kiraana • Admin Panel</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .stat{display:flex;flex-direction:column;gap:6px}
+    .statNum{font-size:28px;font-weight:1000}
+    .statLbl{opacity:.75;font-weight:900}
+  </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand">
-      <div class="logo">A</div> Admin Panel
-    </div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
-      <button class="btn" onclick="logout()">Logout</button>
+      <a class="btn outline" href="admin-users.html">Users</a>
+      <a class="btn outline" href="admin-stores.html">Stores</a>
+      <a class="btn outline" href="admin-orders.html">Orders</a>
+      <a class="btn outline" href="admin-categories.html">Categories</a>
+      <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
-
   <div class="hero">
-    <h1>Admin Dashboard 🛠️</h1>
-    <p>Manage users, stores, categories and orders.</p>
+    <h1>Admin Dashboard 👑</h1>
+    <p>Analytics + manage full platform.</p>
   </div>
 
-  <div class="grid cols-3">
-    <a class="card" href="admin-users.html">
-      <b>Users</b>
-      <div class="small">View all registered users</div>
-    </a>
+  <!-- ✅ Analytics -->
+  <div class="grid cols-4">
+    <div class="card stat">
+      <div class="statLbl">Total Users</div>
+      <div class="statNum" id="sUsers">—</div>
+      <div class="small">All registrations</div>
+    </div>
 
-    <a class="card" href="admin-stores.html">
-      <b>Stores</b>
-      <div class="small">View all stores</div>
-    </a>
+    <div class="card stat">
+      <div class="statLbl">Total Vendors</div>
+      <div class="statNum" id="sVendors">—</div>
+      <div class="small">Shop owners</div>
+    </div>
 
-    <a class="card" href="admin-orders.html">
-      <b>Orders</b>
-      <div class="small">Track and assign delivery</div>
-    </a>
+    <div class="card stat">
+      <div class="statLbl">Total Revenue</div>
+      <div class="statNum" id="sRevenue">₹—</div>
+      <div class="small">All orders sum</div>
+    </div>
 
-    <a class="card" href="admin-categories.html">
-      <b>Categories</b>
-      <div class="small">Add categories + images</div>
-    </a>
-
-    <div class="card">
-      <b>Logged in as</b>
-      <div class="small" id="me">-</div>
-      <div class="small" id="role">-</div>
+    <div class="card stat">
+      <div class="statLbl">Today Orders</div>
+      <div class="statNum" id="sToday">—</div>
+      <div class="small">Orders created today</div>
     </div>
   </div>
 
+  <div class="grid cols-4" style="margin-top:16px">
+    <div class="card">
+      <div class="title">Users</div>
+      <div class="small">Customers, vendors, delivery partners</div><br>
+      <a class="btn" href="admin-users.html">Open</a>
+    </div>
+    <div class="card">
+      <div class="title">Stores</div>
+      <div class="small">All vendor stores listing</div><br>
+      <a class="btn" href="admin-stores.html">Open</a>
+    </div>
+    <div class="card">
+      <div class="title">Orders</div>
+      <div class="small">Tracking, filters, search</div><br>
+      <a class="btn" href="admin-orders.html">Open</a>
+    </div>
+    <div class="card">
+      <div class="title">Categories</div>
+      <div class="small">Add / Delete categories</div><br>
+      <a class="btn" href="admin-categories.html">Open</a>
+    </div>
+  </div>
 </div>
 
+<div class="toast" id="toast">Loaded ✅</div>
+
 <script>
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
+}
+function toast(text,type="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=(type==="red")?"#ef4444":(type==="yellow")?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1500);
+}
+
 const user = localStorage.getItem("user");
 const role = localStorage.getItem("role");
-
 if(!user) location.href="index.html";
-if(role !== "admin"){
-  alert("Access denied! Admin only.");
-  location.href="index.html";
+if(role!=="admin") location.href="index.html";
+
+function logout(){ localStorage.clear(); location.href="index.html"; }
+
+function loadAnalytics(){
+  api({action:"adminAnalytics"})
+  .then(d=>{
+    if(!d.ok){ toast("Analytics error ❌","red"); return; }
+    document.getElementById("sUsers").textContent = d.totalUsers;
+    document.getElementById("sVendors").textContent = d.totalVendors;
+    document.getElementById("sRevenue").textContent = "₹" + Math.round(Number(d.totalRevenue||0));
+    document.getElementById("sToday").textContent = d.todayOrders;
+    toast("Analytics loaded ✅");
+  })
+  .catch(err=>{
+    console.error(err);
+    toast("Server error ❌","red");
+  });
 }
 
-document.getElementById("me").textContent = user;
-document.getElementById("role").textContent = "Role: " + role;
-
-function logout(){
-  localStorage.clear();
-  location.href="index.html";
-}
+loadAnalytics();
 </script>
 
 <div class="footer-space"></div>

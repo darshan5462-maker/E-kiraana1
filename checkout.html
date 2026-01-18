@@ -13,191 +13,164 @@
     <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
       <a class="btn outline" href="cart.html">Back</a>
-      <a class="btn outline" href="orders.html">My Orders</a>
+      <a class="btn outline" href="orders.html">Orders</a>
     </div>
   </div>
 </div>
 
 <div class="container">
-
   <div class="hero">
     <h1>Checkout ✅</h1>
-    <p>Choose Delivery/Pickup and confirm your grocery order.</p>
+    <p>Confirm details and place order.</p>
   </div>
 
   <div class="grid cols-2">
+
     <div class="card">
-      <div class="title">Order Details</div>
+      <div class="title">Delivery Details</div>
 
-      <label class="small"><b>Fulfillment Type</b></label>
-      <select class="input" id="fulfillmentType">
+      <label class="small"><b>Full Address</b></label>
+      <input class="input" id="address" placeholder="House no, Street, Area, City">
+
+      <br><br>
+
+      <label class="small"><b>Fulfillment</b></label>
+      <select class="input" id="fulfillment">
         <option value="Delivery">Delivery</option>
-        <option value="Pickup">Pickup from Store</option>
+        <option value="Pickup">Pickup</option>
       </select>
+
       <br><br>
 
-      <label class="small"><b>Schedule Time</b></label>
-      <select class="input" id="scheduleTime">
-        <option value="">Select time slot</option>
-        <option>09:00 AM - 10:00 AM</option>
-        <option>10:00 AM - 11:00 AM</option>
-        <option>11:00 AM - 12:00 PM</option>
-        <option>12:00 PM - 01:00 PM</option>
-        <option>05:00 PM - 06:00 PM</option>
-        <option>06:00 PM - 07:00 PM</option>
-        <option>07:00 PM - 08:00 PM</option>
+      <label class="small"><b>Schedule Time (optional)</b></label>
+      <select class="input" id="schedule">
+        <option value="">Instant (Fast)</option>
+        <option value="Today 6 PM - 7 PM">Today 6 PM - 7 PM</option>
+        <option value="Today 7 PM - 8 PM">Today 7 PM - 8 PM</option>
+        <option value="Tomorrow 9 AM - 11 AM">Tomorrow 9 AM - 11 AM</option>
       </select>
+
       <br><br>
 
-      <label class="small"><b>Payment Method</b></label>
+      <label class="small"><b>Payment</b></label>
       <select class="input" id="payment">
         <option value="COD">Cash on Delivery (COD)</option>
         <option value="UPI">UPI</option>
-        <option value="Cash at pickup">Cash at pickup</option>
+        <option value="Cash at pickup">Cash at Pickup</option>
       </select>
 
-      <hr style="margin:14px 0">
-
-      <div class="title">Delivery Address</div>
-      <input class="input" id="name" placeholder="Full Name">
-      <br><br>
-      <input class="input" id="phone" placeholder="Phone Number">
-      <br><br>
-      <input class="input" id="address" placeholder="House No / Street / Area">
-      <br><br>
-      <input class="input" id="landmark" placeholder="Landmark (optional)">
-      <br><br>
-      <input class="input" id="pincode" placeholder="Pincode">
-      <br><br>
-
-      <button class="btn" style="width:100%" onclick="placeOrder()">Place Order</button>
-      <p class="small" id="msg" style="margin-top:10px;"></p>
     </div>
 
     <div class="card">
-      <div class="title">Order Summary</div>
-      <div id="summary"></div>
+      <div class="title">Final Bill</div>
+      <div class="small">Review total and place order.</div>
+
       <hr>
+
       <div class="row space">
-        <b>Total Amount</b>
+        <b>Total Payable</b>
         <div class="price" id="total">₹0</div>
       </div>
+
+      <br>
+
+      <button class="btn" style="width:100%" onclick="placeOrder()">Place Order</button>
+      <p class="small" id="msg" style="margin-top:10px"></p>
     </div>
+
   </div>
 </div>
 
-<div class="toast" id="toast">Order placed ✅</div>
+<div class="toast" id="toast">Placed ✅</div>
 
 <script>
-const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
-const user=localStorage.getItem("user");
-const role=localStorage.getItem("role");
-const storeId=localStorage.getItem("storeId");
+const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
 
-if(!user) location.href="index.html";
-if(role!=="customer") location.href="index.html";
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
+}
 
-function showToast(text,color="green"){
+function showToast(text, type="green"){
   const t=document.getElementById("toast");
   t.textContent=text;
-  t.style.background=color==="red"?"#ef4444":color==="yellow"?"#f59e0b":"#16a34a";
+  if(type==="red") t.style.background="#ef4444";
+  else if(type==="yellow") t.style.background="#f59e0b";
+  else t.style.background="#16a34a";
   t.style.display="block";
   setTimeout(()=>t.style.display="none",2000);
 }
 
-function cart(){ return JSON.parse(localStorage.getItem("cart")||"[]"); }
-
-function renderSummary(){
-  const c=cart();
-  const box=document.getElementById("summary");
-  let total=0;
-  box.innerHTML="";
-  if(c.length===0){ box.innerHTML="<b>Cart empty</b>"; return; }
-
-  c.forEach(i=>{
-    total += i.price*i.qty;
-    box.innerHTML += `
-      <div class="row space" style="margin-bottom:10px">
-        <div>
-          <b>${i.name}</b>
-          <div class="small">${i.unit} • Qty: ${i.qty}</div>
-        </div>
-        <b>₹${i.price*i.qty}</b>
-      </div>`;
-  });
-
-  const deliveryFee = total>=199?0:20;
-  const finalTotal = total+deliveryFee;
-
-  box.innerHTML += `<hr>
-    <div class="row space"><div class="small">Items Total</div><b>₹${total}</b></div>
-    <div class="row space" style="margin-top:6px"><div class="small">Delivery Fee</div><b>₹${deliveryFee}</b></div>`;
-  document.getElementById("total").textContent="₹"+finalTotal;
+function getCart(){
+  return JSON.parse(localStorage.getItem("cart") || "[]");
 }
 
-renderSummary();
+const user = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+if(!user) location.href="index.html";
+if(role !== "customer") location.href="index.html";
+
+const storeId = localStorage.getItem("selectedStoreId");
+if(!storeId) location.href="home.html";
+
+const total = Number(localStorage.getItem("checkout_total") || 0);
+document.getElementById("total").textContent = "₹" + total;
 
 function placeOrder(){
-  const c=cart();
-  if(c.length===0){ showToast("Cart is empty","yellow"); return; }
-
-  const fulfillmentType=document.getElementById("fulfillmentType").value;
-  const scheduleTime=document.getElementById("scheduleTime").value;
-  const payment=document.getElementById("payment").value;
-
-  const name=document.getElementById("name").value.trim();
-  const phone=document.getElementById("phone").value.trim();
-  const address=document.getElementById("address").value.trim();
-  const landmark=document.getElementById("landmark").value.trim();
-  const pincode=document.getElementById("pincode").value.trim();
-  const msg=document.getElementById("msg");
-
-  msg.textContent="";
-
-  if(!name || !phone || !address || !pincode){
-    msg.textContent="Please fill required address fields!";
-    showToast("Fill address properly","yellow");
+  const cart = getCart();
+  if(cart.length === 0){
+    showToast("Cart empty ❌","red");
     return;
   }
 
-  let itemsTotal=c.reduce((a,b)=>a+(b.price*b.qty),0);
-  const deliveryFee=itemsTotal>=199?0:20;
-  const finalTotal=itemsTotal+deliveryFee;
+  const address = document.getElementById("address").value.trim();
+  const fulfillmentType = document.getElementById("fulfillment").value;
+  const scheduleTime = document.getElementById("schedule").value;
+  const payment = document.getElementById("payment").value;
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
 
-  const fullAddress=`Name:${name}, Phone:${phone}, Address:${address}, Landmark:${landmark||"-"}, Pincode:${pincode}`;
+  if(fulfillmentType === "Delivery" && !address){
+    msg.textContent = "Address required for delivery!";
+    showToast("Enter address ⚠️","yellow");
+    return;
+  }
 
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      action:"placeOrder",
-      customer:user,
-      storeId:storeId,
-      items:JSON.stringify(c),
-      total:finalTotal,
-      address:fullAddress,
-      fulfillmentType,
-      scheduleTime,
-      payment
-    })
+  const items = JSON.stringify(cart.map(x=>({
+    productId: x.productId,
+    name: x.productName,
+    price: x.price,
+    unit: x.unit,
+    qty: x.qty
+  })));
+
+  api({
+    action:"placeOrder",
+    customer: user,
+    storeId,
+    items,
+    total: total,
+    address,
+    fulfillmentType,
+    scheduleTime,
+    payment
   })
-  .then(r=>r.json())
   .then(d=>{
     if(d.ok){
-      showToast("Order placed ✅");
       localStorage.removeItem("cart");
-      setTimeout(()=>location.href="orders.html",1200);
-    }else{
-      showToast("Order failed","red");
-      msg.textContent=d.msg||"Failed";
+      showToast("Order placed ✅");
+      setTimeout(()=>location.href="orders.html", 900);
+    } else {
+      showToast(d.msg || "Failed ❌","red");
     }
   })
   .catch(err=>{
     console.error(err);
-    showToast("Server Error","red");
-    msg.textContent="Server error";
+    showToast("Server error ❌","red");
   });
 }
 </script>
+
+<div class="footer-space"></div>
 </body>
 </html>

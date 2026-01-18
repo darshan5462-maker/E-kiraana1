@@ -28,12 +28,13 @@
   </div>
 
   <div class="grid cols-2">
-    <!-- Login -->
+    <!-- Login Card -->
     <div class="card">
       <div class="title">Login</div>
 
-      <input class="input" id="username" placeholder="Username">
+      <input class="input" id="username" placeholder="Username / Phone">
       <br><br>
+
       <input class="input" id="password" type="password" placeholder="Password">
       <br><br>
 
@@ -41,9 +42,13 @@
       <a class="btn outline" href="register.html">New user? Register</a>
 
       <p class="small" id="msg" style="margin-top:12px;"></p>
+
+      <div class="small" style="margin-top:10px">
+        <b>Tip:</b> Use the same username/password you registered.
+      </div>
     </div>
 
-    <!-- Why -->
+    <!-- Why Card -->
     <div class="card">
       <div class="title">Why e-Kiraana?</div>
       <div class="small" style="font-size:14px;line-height:1.7">
@@ -54,8 +59,8 @@
         ✅ Vendor + Delivery + Admin system <br>
       </div>
       <hr>
-      <b style="display:block;margin-bottom:8px;">Demo Tip:</b>
-      <div class="small">Create account first, then login with same username/password.</div>
+      <b style="display:block;margin-bottom:8px;">Demo Login:</b>
+      <div class="small">Register a user first, then login.</div>
     </div>
   </div>
 
@@ -65,15 +70,13 @@
 <div class="toast" id="toast">Login successful ✅</div>
 
 <script>
-/* ✅ Keep SAME API in all pages */
+/* ✅ PUT YOUR doGet Web App URL here */
 const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
 
-/* ✅ FIX: No headers => No CORS */
-function api(payload){
-  return fetch(API, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  }).then(r => r.json());
+/* ✅ GET API helper (CORS SAFE) */
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r => r.json());
 }
 
 function showToast(text, color="green"){
@@ -85,34 +88,50 @@ function showToast(text, color="green"){
   else t.style.background="#16a34a";
 
   t.style.display="block";
-  setTimeout(()=>{ t.style.display="none"; }, 2200);
+  setTimeout(()=> t.style.display="none", 2200);
 }
 
+/* ✅ Login */
 function login(){
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+
+  if(!username || !password){
+    msg.textContent = "Please enter username and password.";
+    showToast("Fill all fields ⚠️","yellow");
+    return;
+  }
 
   api({ action:"login", username, password })
   .then(d=>{
-    alert("LOGIN RESPONSE:\n" + JSON.stringify(d, null, 2));  // ✅ shows server reply
+    console.log("LOGIN:", d);
 
-    if(d.ok){
-      localStorage.setItem("user", d.user);
-      localStorage.setItem("role", d.role);
-
-      if(d.role === "vendor") location.href="vendor.html";
-      else if(d.role === "delivery") location.href="delivery.html";
-      else if(d.role === "admin") location.href="admin.html";
-      else location.href="home.html";
+    if(!d.ok){
+      msg.textContent = d.msg || "Login failed!";
+      showToast(d.msg || "Login failed ❌", "red");
+      return;
     }
+
+    localStorage.setItem("user", d.user);
+    localStorage.setItem("role", d.role);
+
+    showToast("Login successful ✅");
+
+    setTimeout(()=>{
+      if(d.role === "vendor") location.href = "vendor.html";
+      else if(d.role === "delivery") location.href = "delivery.html";
+      else if(d.role === "admin") location.href = "admin.html";
+      else location.href = "home.html";
+    }, 900);
   })
   .catch(err=>{
-    alert("FETCH ERROR:\n" + err);
     console.error(err);
+    msg.textContent = "API Error! Check deployment.";
+    showToast("Server error ❌", "red");
   });
 }
-
-
 </script>
 
 <div class="footer-space"></div>

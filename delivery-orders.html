@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>e-Kiraana • Delivery Orders</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .statusBadge{
+      padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;color:white;
+    }
+    .mini{font-size:12px;font-weight:800;opacity:.85}
+    .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .addr{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:12px;margin-top:10px}
+  </style>
 </head>
 <body>
 
@@ -12,19 +20,21 @@
   <div class="container inner">
     <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
-      <a class="btn outline" href="delivery.html">Back</a>
+      <a class="btn outline" href="delivery.html">Dashboard</a>
       <button class="btn danger" onclick="logout()">Logout</button>
     </div>
   </div>
 </div>
 
 <div class="container">
+
   <div class="hero">
     <h1>Assigned Orders 🚚</h1>
-    <p>Start delivery and mark delivered.</p>
+    <p>Update status only for orders assigned to you.</p>
   </div>
 
   <div class="grid cols-2" id="orders"></div>
+
 </div>
 
 <div class="toast" id="toast">Updated ✅</div>
@@ -32,111 +42,154 @@
 <script>
 const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
 
-const deliveryBoy=localStorage.getItem("user");
-const role=localStorage.getItem("role");
-
-if(!deliveryBoy) location.href="index.html";
-if(role!=="delivery"){ alert("Delivery only"); location.href="index.html"; }
-
-function logout(){ localStorage.clear(); location.href="index.html"; }
-
-function showToast(text,color="green"){
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
+}
+function toast(text,type="green"){
   const t=document.getElementById("toast");
   t.textContent=text;
-  t.style.background=color==="red"?"#ef4444":color==="yellow"?"#f59e0b":"#16a34a";
+  t.style.background=(type==="red")?"#ef4444":(type==="yellow")?"#f59e0b":"#16a34a";
   t.style.display="block";
   setTimeout(()=>t.style.display="none",1800);
 }
 
-function statusColor(status){
-  if(status==="Accepted") return "#2563eb";
-  if(status==="Ready") return "#8b5cf6";
-  if(status==="Out for delivery") return "#0ea5e9";
-  if(status==="Delivered") return "#16a34a";
+const deliveryBoy=localStorage.getItem("user");
+const role=localStorage.getItem("role");
+if(!deliveryBoy) location.href="index.html";
+if(role!=="delivery") location.href="index.html";
+
+function logout(){
+  localStorage.clear();
+  location.href="index.html";
+}
+
+function statusColor(s){
+  if(s==="Accepted") return "#2563eb";
+  if(s==="Ready") return "#8b5cf6";
+  if(s==="Out for delivery") return "#0ea5e9";
+  if(s==="Delivered") return "#16a34a";
   return "#6b7280";
 }
 
-function buttons(orderId,status){
-  if(status==="Accepted" || status==="Ready"){
-    return `<button class="btn" onclick="update('${orderId}','Out for delivery')">🚚 Start Delivery</button>`;
-  }
-  if(status==="Out for delivery"){
-    return `<button class="btn green" onclick="update('${orderId}','Delivered')">✅ Delivered</button>`;
-  }
-  return `<div class="small">No action available</div>`;
+function parseItems(itemsStr){
+  try{ return JSON.parse(itemsStr||"[]"); }catch(e){ return []; }
 }
 
-function loadOrders(){
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ action:"deliveryOrders", deliveryBoy })
-  })
-  .then(r=>r.json())
-  .then(rows=>{
-    const box=document.getElementById("orders");
-    box.innerHTML="";
-    const list=rows.slice(1).reverse();
-
-    if(list.length===0){
-      box.innerHTML=`<div class="card"><b>No assigned orders.</b><div class="small">Wait for assignment.</div></div>`;
-      return;
+function updateStatus(orderId, status){
+  api({action:"deliveryUpdate", orderId, status, deliveryBoy})
+  .then(d=>{
+    if(d.ok){
+      toast("Status updated ✅");
+      loadOrders();
+    } else {
+      toast(d.msg || "Failed ❌","red");
     }
-
-    list.forEach(o=>{
-      const status=String(o[5]).trim();
-      const card=document.createElement("div");
-      card.className="card";
-      card.innerHTML=`
-        <div class="row space">
-          <b>Order: ${o[0]}</b>
-          <span style="color:white;background:${statusColor(status)};padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px">${status}</span>
-        </div>
-
-        <div class="small" style="margin-top:8px">Customer: <b>${o[1]}</b></div>
-        <div class="small">Address: ${o[9] || "-"}</div>
-
-        <hr>
-
-        <div class="row space">
-          <div class="price">₹${o[4]}</div>
-          <b>${status}</b>
-        </div>
-
-        <br>
-        ${buttons(o[0],status)}
-      `;
-      box.appendChild(card);
-    });
   })
   .catch(err=>{
     console.error(err);
-    showToast("Server Error ❌","red");
+    toast("Server error ❌","red");
   });
 }
 
-function update(orderId,status){
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ action:"deliveryUpdate", orderId, status, deliveryBoy })
-  })
-  .then(r=>r.json())
-  .then(d=>{
-    if(d.ok){
-      showToast("Updated ✅");
-      loadOrders();
-    }else{
-      showToast(d.msg || "Failed ❌","red");
+function card(o){
+  const orderId=o[0];
+  const status=String(o[5]||"").trim();
+  const items=parseItems(o[3]);
+
+  const fulfillment=String(o[10]||"").trim();
+  const schedule=String(o[11]||"").trim();
+  const readyTime=String(o[12]||"").trim();
+
+  const address=String(o[9]||"").trim();
+  const customer=String(o[1]||"").trim();
+
+  const itemsHtml = items.slice(0,8).map(it=>`<div class="mini">• ${it.name} × ${it.qty}</div>`).join("");
+  const more = items.length>8 ? `<div class="mini">+${items.length-8} more</div>` : "";
+
+  let actionButtons = "";
+  if(status==="Accepted" || status==="Ready"){
+    actionButtons = `<button class="btn" onclick="updateStatus('${orderId}','Out for delivery')">Start Delivery</button>`;
+  }
+  if(status==="Out for delivery"){
+    actionButtons += `<button class="btn" onclick="updateStatus('${orderId}','Delivered')">Mark Delivered</button>`;
+  }
+  if(status==="Delivered"){
+    actionButtons = `<div style="font-weight:900;color:#16a34a;margin-top:8px">✅ Delivered</div>`;
+  }
+
+  const mapUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address || "");
+
+  return `
+    <div class="card">
+      <div class="row space">
+        <b style="font-size:16px">Order ${orderId}</b>
+        <span class="statusBadge" style="background:${statusColor(status)}">${status}</span>
+      </div>
+
+      <div class="small" style="margin-top:8px"><b>Customer:</b> ${customer}</div>
+      <div class="small"><b>Total:</b> ₹${o[4]}</div>
+      <div class="small"><b>Fulfillment:</b> ${fulfillment || "Delivery"}</div>
+      <div class="small"><b>Schedule:</b> ${schedule || "-"}</div>
+      <div class="small"><b>Ready Time:</b> ${readyTime || "-"}</div>
+
+      ${fulfillment === "Delivery" ? `
+        <div class="addr">
+          <div class="mini" style="margin-bottom:6px"><b>Delivery Address</b></div>
+          <div style="font-weight:900">${address || "Address not provided"}</div>
+          <div class="tools">
+            <a class="btn outline" target="_blank" href="${mapUrl}">
+              Open in Google Maps 🗺️
+            </a>
+          </div>
+        </div>
+      ` : `
+        <div class="addr">
+          <div class="mini" style="margin-bottom:6px"><b>Pickup Order</b></div>
+          <div style="font-weight:900">Customer will pickup from store</div>
+        </div>
+      `}
+
+      <hr>
+      <div class="small"><b>Items:</b></div>
+      ${itemsHtml}${more}
+
+      <div class="tools">
+        ${actionButtons}
+      </div>
+    </div>
+  `;
+}
+
+function loadOrders(){
+  api({action:"deliveryOrders", deliveryBoy})
+  .then(rows=>{
+    const box=document.getElementById("orders");
+    box.innerHTML="";
+    const list = rows.slice(1).reverse();
+
+    if(list.length===0){
+      box.innerHTML = `
+        <div class="card">
+          <b>No assigned orders</b>
+          <div class="small">Vendor must assign orders to you.</div>
+        </div>
+      `;
+      return;
     }
+
+    list.forEach(o=> box.innerHTML += card(o));
   })
   .catch(err=>{
     console.error(err);
-    showToast("Server Error ❌","red");
+    toast("Failed to load orders ❌","red");
   });
 }
 
 loadOrders();
+setInterval(loadOrders, 12000);
 </script>
+
+<div class="footer-space"></div>
 </body>
 </html>

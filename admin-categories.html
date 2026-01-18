@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>e-Kiraana • Admin Categories</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .catRow{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0;padding:12px;border:1px solid #e2e8f0;border-radius:18px}
+    .catRow img{width:64px;height:64px;border-radius:16px;object-fit:cover;border:1px solid #e2e8f0}
+  </style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="admin.html">Dashboard</a>
+      <a class="btn outline" href="admin-users.html">Users</a>
+      <a class="btn outline" href="admin-stores.html">Stores</a>
+      <a class="btn outline" href="admin-orders.html">Orders</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Categories ⚙️</h1>
+    <p>Add/Delete categories with image URL.</p>
+  </div>
+
+  <div class="grid cols-2">
+
+    <div class="card">
+      <div class="title">Add Category</div>
+      <input class="input" id="name" placeholder="Category name (eg: Snacks)">
+      <br><br>
+      <input class="input" id="img" placeholder="Image URL (optional)">
+      <br><br>
+      <button class="btn" onclick="addCat()">Add Category</button>
+      <p class="small" id="msg" style="margin-top:10px"></p>
+    </div>
+
+    <div class="card">
+      <div class="title">Existing Categories</div>
+      <div class="small">Tap delete to remove category.</div>
+      <hr>
+      <div id="cats"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">Done ✅</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
+}
+function toast(text,type="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=(type==="red")?"#ef4444":(type==="yellow")?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1500);
+}
+const role = localStorage.getItem("role");
+if(role!=="admin") location.href="index.html";
+
+function addCat(){
+  const name=document.getElementById("name").value.trim();
+  const img=document.getElementById("img").value.trim();
+  const msg=document.getElementById("msg");
+  msg.textContent="";
+
+  if(!name){
+    msg.textContent="Category name required!";
+    toast("Fill name ⚠️","yellow");
+    return;
+  }
+
+  api({action:"adminAddCategory", categoryName:name, imageUrl:img})
+  .then(d=>{
+    if(d.ok){
+      toast("Category added ✅");
+      document.getElementById("name").value="";
+      document.getElementById("img").value="";
+      loadCats();
+    } else toast(d.msg||"Failed ❌","red");
+  })
+  .catch(err=>{console.error(err);toast("Server error ❌","red");});
+}
+
+function deleteCat(name){
+  if(!confirm("Delete category: "+name+" ?")) return;
+  api({action:"adminDeleteCategory", categoryName:name})
+  .then(d=>{
+    if(d.ok){
+      toast("Deleted ✅");
+      loadCats();
+    } else toast(d.msg||"Failed ❌","red");
+  })
+  .catch(err=>{console.error(err);toast("Server error ❌","red");});
+}
+
+function loadCats(){
+  api({action:"categories"})
+  .then(rows=>{
+    const box=document.getElementById("cats");
+    box.innerHTML="";
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const safe=r[1] || "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=800&q=60";
+      const name=r[0];
+      box.innerHTML += `
+        <div class="catRow">
+          <div style="display:flex;gap:12px;align-items:center">
+            <img src="${safe}" onerror="this.src='https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=800&q=60'">
+            <div>
+              <div style="font-weight:900">${name}</div>
+              <div class="small">Image: ${r[1] ? "✅" : "Default"}</div>
+            </div>
+          </div>
+          <button class="btn danger" onclick="deleteCat('${name.replace(/'/g,"\\'")}')">Delete</button>
+        </div>
+      `;
+    }
+    if(rows.length<=1) box.innerHTML=`<div class="small">No categories added.</div>`;
+  })
+  .catch(err=>{console.error(err);toast("Failed to load ❌","red");});
+}
+
+loadCats();
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

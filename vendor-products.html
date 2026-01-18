@@ -3,276 +3,312 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>e-Kiraana • Add Products</title>
+  <title>e-Kiraana • Vendor Products</title>
   <link rel="stylesheet" href="style.css">
-
   <style>
-    .preview{
-      width:100%;
-      height:180px;
-      border:1px solid #e2e8f0;
-      border-radius:20px;
-      overflow:hidden;
-      margin-top:10px;
-      background:linear-gradient(135deg,#e0f2fe,#dcfce7);
-      display:grid;
-      place-items:center;
-      font-weight:900;
-      color:#0284c7;
-    }
-    .preview img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
+    .pRow{border:1px solid #e2e8f0;border-radius:18px;padding:12px;margin:10px 0;background:#fff}
+    .pTop{display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .pTop img{width:64px;height:64px;border-radius:16px;object-fit:cover;border:1px solid #e2e8f0}
+    .pName{font-weight:900}
+    .pMeta{font-size:13px;opacity:.85;font-weight:800}
+    .btnSmall{padding:8px 12px;border-radius:14px}
+    .editBox{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0}
+    .low{color:#ef4444;font-weight:1000}
+    .ok{color:#16a34a;font-weight:1000}
   </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <div class="navbar">
   <div class="container inner">
-    <div class="brand">
-      <div class="logo">E</div> e-Kiraana
-    </div>
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
     <div class="nav-actions">
-      <a class="btn outline" href="vendor.html">Back</a>
-      <button class="btn danger" onclick="logout()">Logout</button>
+      <a class="btn outline" href="vendor.html">Dashboard</a>
+      <a class="btn outline" href="vendor-stores.html">Stores</a>
+      <a class="btn outline" href="vendor-orders.html">Orders</a>
     </div>
   </div>
 </div>
 
 <div class="container">
-
   <div class="hero">
-    <h1>Add Grocery Products 🧺</h1>
-    <p>Select your store and add grocery items with images.</p>
+    <h1>Products Manager 🧾</h1>
+    <p>Add products + edit details + see Low Stock warnings.</p>
   </div>
 
   <div class="grid cols-2">
 
-    <!-- Add Product Form -->
+    <!-- Add Product -->
     <div class="card">
       <div class="title">Add Product</div>
 
       <label class="small"><b>Select Store</b></label>
-      <select class="input" id="store"></select>
+      <select class="input" id="storeSelect"></select>
+
       <br><br>
 
-      <label class="small"><b>Select Category</b></label>
-      <select class="input" id="category"></select>
+      <input class="input" id="category" placeholder="Category (eg: Rice, Snacks)">
       <br><br>
 
-      <input class="input" id="productName" placeholder="Product Name (ex: Tomato)">
+      <input class="input" id="productName" placeholder="Product name (eg: Tata Salt)">
       <br><br>
 
       <input class="input" id="brand" placeholder="Brand (optional)">
       <br><br>
 
-      <input class="input" id="price" type="number" placeholder="Price (ex: 40)">
+      <input class="input" id="price" type="number" placeholder="Price (₹)">
       <br><br>
 
-      <input class="input" id="unit" placeholder="Unit (ex: 1kg / 500g / 1L)">
+      <input class="input" id="unit" placeholder="Unit (eg: 1kg, 500g, 1L)">
       <br><br>
 
-      <input class="input" id="imageUrl" placeholder="Product Image URL (optional)" oninput="previewImg()">
-      <div class="preview" id="preview">Image Preview</div>
+      <input class="input" id="imageUrl" placeholder="Product Image URL (optional)">
+      <br><br>
 
-      <br>
-      <button class="btn" style="width:100%" onclick="addProduct()">➕ Add Product</button>
+      <!-- ✅ New stock fields -->
+      <input class="input" id="stock" type="number" placeholder="Stock quantity (eg: 50)">
+      <br><br>
 
-      <p class="small" id="msg" style="margin-top:10px;"></p>
+      <input class="input" id="minStock" type="number" placeholder="Min stock alert (eg: 10)">
+      <br><br>
+
+      <button class="btn" onclick="addProduct()">Add Product</button>
+      <p class="small" id="msg" style="margin-top:10px"></p>
+      <div class="small" style="margin-top:8px">
+        ✅ Low stock appears if stock ≤ minStock
+      </div>
     </div>
 
-    <!-- Tips -->
+    <!-- Product List -->
     <div class="card">
-      <div class="title">Tips for Better Sales 📈</div>
-      <div class="small" style="font-size:14px;line-height:1.7">
-        ✅ Add clear product images <br>
-        ✅ Use proper units like 1kg, 500g, 1L <br>
-        ✅ Keep price updated daily <br>
-        ✅ Add brand only when required <br><br>
-
-        <b>Example Image URL:</b><br>
-        Paste any Google image link / product image link.
-      </div>
-
+      <div class="title">Your Products</div>
+      <div class="small">Only products from your stores.</div>
       <hr>
-      <div class="small">
-        If store list is empty: first create store in <b>Vendor Stores</b>.
-      </div>
+      <input class="input" id="search" placeholder="Search product..." oninput="renderProducts()">
+      <div id="list"></div>
     </div>
 
   </div>
-
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast">Product added ✅</div>
+<div class="toast" id="toast">Done ✅</div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
-
-const vendor = localStorage.getItem("user");
-const role = localStorage.getItem("role");
-
-if(!vendor) location.href="index.html";
-if(role !== "vendor"){
-  alert("Access denied! Only shop owners (vendor).");
-  location.href="index.html";
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
 }
-
-function logout(){
-  localStorage.clear();
-  location.href="index.html";
-}
-
-function showToast(text, color="green"){
-  const t = document.getElementById("toast");
-  t.textContent = text;
-
-  if(color==="red") t.style.background="#ef4444";
-  else if(color==="yellow") t.style.background="#f59e0b";
-  else t.style.background="#16a34a";
-
+function toast(text,type="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=(type==="red")?"#ef4444":(type==="yellow")?"#f59e0b":"#16a34a";
   t.style.display="block";
-  setTimeout(()=>{ t.style.display="none"; }, 2000);
+  setTimeout(()=>t.style.display="none",1800);
 }
 
-// Load vendor stores
+const vendor=localStorage.getItem("user");
+const role=localStorage.getItem("role");
+if(!vendor) location.href="index.html";
+if(role!=="vendor") location.href="index.html";
+
+let STORES=[];
+let ALL_PRODUCTS=[];
+
 function loadStores(){
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ action:"vendorStores", vendor })
-  })
-  .then(r=>r.json())
+  api({action:"vendorStores", vendor})
   .then(rows=>{
-    const sel=document.getElementById("store");
+    STORES=[];
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      STORES.push({storeId:r[0],storeName:r[1]});
+    }
+    const sel=document.getElementById("storeSelect");
     sel.innerHTML="";
-
-    const list = rows.slice(1);
-
-    if(list.length===0){
-      sel.innerHTML = `<option value="">No store found</option>`;
+    if(STORES.length===0){
+      sel.innerHTML=`<option value="">No stores - create store first</option>`;
+      toast("Create store first ⚠️","yellow");
       return;
     }
-
-    list.forEach(s=>{
-      const opt=document.createElement("option");
-      opt.value=s[0]; // storeId
-      opt.textContent=`${s[1]} (${s[0]})`;
-      sel.appendChild(opt);
-    });
-  });
-}
-
-// Load categories
-function loadCategories(){
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ action:"categories" })
+    STORES.forEach(s=> sel.innerHTML += `<option value="${s.storeId}">${s.storeName} (${s.storeId})</option>`);
   })
-  .then(r=>r.json())
-  .then(rows=>{
-    const sel=document.getElementById("category");
-    sel.innerHTML="";
-
-    const list = rows.slice(1);
-
-    if(list.length===0){
-      sel.innerHTML=`<option value="">No categories</option>`;
-      return;
-    }
-
-    list.forEach(c=>{
-      const opt=document.createElement("option");
-      opt.value=c[0];
-      opt.textContent=c[0];
-      sel.appendChild(opt);
-    });
-  });
-}
-
-function previewImg(){
-  const url = document.getElementById("imageUrl").value.trim();
-  const box = document.getElementById("preview");
-
-  if(!url){
-    box.innerHTML = "Image Preview";
-    return;
-  }
-
-  box.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='Invalid image URL ❌'">`;
+  .catch(err=>{console.error(err);toast("Failed to load stores ❌","red");});
 }
 
 function addProduct(){
-  const storeId = document.getElementById("store").value.trim();
-  const category = document.getElementById("category").value.trim();
-  const productName = document.getElementById("productName").value.trim();
-  const brand = document.getElementById("brand").value.trim();
-  const price = document.getElementById("price").value.trim();
-  const unit = document.getElementById("unit").value.trim();
-  const imageUrl = document.getElementById("imageUrl").value.trim();
-  const msg = document.getElementById("msg");
+  const storeId=document.getElementById("storeSelect").value;
+  const category=document.getElementById("category").value.trim();
+  const productName=document.getElementById("productName").value.trim();
+  const brand=document.getElementById("brand").value.trim();
+  const price=document.getElementById("price").value.trim();
+  const unit=document.getElementById("unit").value.trim();
+  const imageUrl=document.getElementById("imageUrl").value.trim();
+  const stock=document.getElementById("stock").value.trim();
+  const minStock=document.getElementById("minStock").value.trim();
+  const msg=document.getElementById("msg");
+  msg.textContent="";
 
-  msg.textContent = "";
-
-  if(!storeId){
-    msg.textContent = "Please create/select store first.";
-    showToast("No store selected ⚠️", "yellow");
-    return;
-  }
-
+  if(!storeId){ msg.textContent="Create store first!"; toast("No store selected ⚠️","yellow"); return; }
   if(!category || !productName || !price || !unit){
-    msg.textContent = "Fill all required fields!";
-    showToast("Fill all required fields ⚠️", "yellow");
+    msg.textContent="Fill Category, Product, Price, Unit.";
+    toast("Fill required fields ⚠️","yellow");
     return;
   }
 
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      action:"vendorAddProduct",
-      vendor,
-      storeId,
-      category,
-      productName,
-      brand,
-      price,
-      unit,
-      imageUrl
-    })
+  api({
+    action:"vendorAddProduct",
+    vendor,
+    storeId,
+    category,
+    productName,
+    brand,
+    price,
+    unit,
+    imageUrl,
+    stock,
+    minStock
   })
-  .then(r=>r.json())
   .then(d=>{
     if(d.ok){
-      showToast("Product added successfully ✅");
-
-      document.getElementById("productName").value="";
-      document.getElementById("brand").value="";
-      document.getElementById("price").value="";
-      document.getElementById("unit").value="";
-      document.getElementById("imageUrl").value="";
-      previewImg();
-
-    }else{
-      msg.textContent = d.msg || "Failed!";
-      showToast(d.msg || "Failed ❌", "red");
-    }
+      toast("Product added ✅");
+      ["category","productName","brand","price","unit","imageUrl","stock","minStock"]
+        .forEach(id=>document.getElementById(id).value="");
+      loadVendorProducts();
+    } else toast(d.msg||"Failed ❌","red");
   })
-  .catch(err=>{
+  .catch(err=>{console.error(err);toast("Server error ❌","red");});
+}
+
+function loadVendorProducts(){
+  api({action:"vendorProducts", vendor})
+  .then(rows=>{
+    ALL_PRODUCTS=[];
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      ALL_PRODUCTS.push({
+        productId:r[0], storeId:r[1], category:r[2],
+        productName:r[3], brand:r[4], price:r[5], unit:r[6], imageUrl:r[7],
+        stock:r[8], minStock:r[9]
+      });
+    }
+    renderProducts();
+  })
+  .catch(err=>{console.error(err);toast("Failed to load products ❌","red");});
+}
+
+function toggleEdit(pid){
+  const box=document.getElementById("edit_"+pid);
+  box.style.display = (box.style.display==="block") ? "none" : "block";
+}
+
+function updateProduct(pid){
+  const pName=document.getElementById("pname_"+pid).value.trim();
+  const brand=document.getElementById("brand_"+pid).value.trim();
+  const price=document.getElementById("price_"+pid).value.trim();
+  const unit=document.getElementById("unit_"+pid).value.trim();
+  const img=document.getElementById("img_"+pid).value.trim();
+  const stock=document.getElementById("stock_"+pid).value.trim();
+  const min=document.getElementById("min_"+pid).value.trim();
+
+  api({
+    action:"vendorUpdateProduct",
+    productId:pid,
+    productName:pName,
+    brand,
+    price,
+    unit,
+    imageUrl:img,
+    stock,
+    minStock:min
+  }).then(d=>{
+    if(d.ok){
+      toast("Updated ✅");
+      loadVendorProducts();
+    }else toast(d.msg||"Failed ❌","red");
+  }).catch(err=>{
     console.error(err);
-    msg.textContent = "Server error! Check deployment.";
-    showToast("Server error ❌", "red");
+    toast("Server error ❌","red");
+  });
+}
+
+function deleteProduct(pid){
+  if(!confirm("Delete this product?")) return;
+  api({action:"vendorDeleteProduct", productId:pid})
+  .then(d=>{
+    if(d.ok){ toast("Deleted ✅"); loadVendorProducts(); }
+    else toast(d.msg||"Failed ❌","red");
+  })
+  .catch(err=>{console.error(err);toast("Server error ❌","red");});
+}
+
+function renderProducts(){
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  const box=document.getElementById("list");
+  box.innerHTML="";
+
+  const list=ALL_PRODUCTS.filter(p=>{
+    const s=(p.productName+" "+p.brand+" "+p.category+" "+p.storeId).toLowerCase();
+    return s.includes(q);
+  });
+
+  if(list.length===0){
+    box.innerHTML=`<div class="small">No products found.</div>`;
+    return;
+  }
+
+  list.forEach(p=>{
+    const img=p.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=60";
+    const stock = Number(p.stock || 0);
+    const minStock = Number(p.minStock || 10);
+    const low = stock <= minStock;
+
+    box.innerHTML += `
+      <div class="pRow">
+        <div class="pTop">
+          <div style="display:flex;gap:12px;align-items:center">
+            <img src="${img}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=60'">
+            <div>
+              <div class="pName">${p.productName}</div>
+              <div class="pMeta">${p.category} • ${p.brand || "e-Kiraana"}</div>
+              <div class="pMeta"><b>₹${p.price}</b> / ${p.unit}</div>
+
+              <div class="pMeta">
+                Stock:
+                <span class="${low ? "low" : "ok"}">${stock}</span>
+                ${low ? "⚠️ Low stock" : "✅ OK"}
+                (Min: ${minStock})
+              </div>
+
+              <div class="pMeta">Store: <b>${p.storeId}</b> | ID: <b>${p.productId}</b></div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn outline btnSmall" onclick="toggleEdit('${p.productId}')">Edit</button>
+            <button class="btn danger btnSmall" onclick="deleteProduct('${p.productId}')">Delete</button>
+          </div>
+        </div>
+
+        <div class="editBox" id="edit_${p.productId}">
+          <input class="input" id="pname_${p.productId}" value="${(p.productName||"").replace(/"/g,'&quot;')}" placeholder="Product name">
+          <input class="input" id="brand_${p.productId}" value="${(p.brand||"").replace(/"/g,'&quot;')}" placeholder="Brand">
+          <input class="input" id="price_${p.productId}" value="${p.price||""}" placeholder="Price">
+          <input class="input" id="unit_${p.productId}" value="${(p.unit||"").replace(/"/g,'&quot;')}" placeholder="Unit">
+          <input class="input" id="img_${p.productId}" value="${(p.imageUrl||"").replace(/"/g,'&quot;')}" placeholder="Image URL">
+
+          <input class="input" id="stock_${p.productId}" value="${stock}" placeholder="Stock">
+          <input class="input" id="min_${p.productId}" value="${minStock}" placeholder="Min Stock">
+
+          <br>
+          <button class="btn" onclick="updateProduct('${p.productId}')">Save Changes</button>
+        </div>
+      </div>
+    `;
   });
 }
 
 loadStores();
-loadCategories();
+loadVendorProducts();
 </script>
 
 <div class="footer-space"></div>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>e-Kiraana • Admin Stores</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container inner">
+    <div class="brand"><div class="logo">E</div> e-Kiraana</div>
+    <div class="nav-actions">
+      <a class="btn outline" href="admin.html">Dashboard</a>
+      <a class="btn outline" href="admin-users.html">Users</a>
+      <a class="btn outline" href="admin-orders.html">Orders</a>
+      <a class="btn outline" href="admin-categories.html">Categories</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>All Stores 🏪</h1>
+    <p>View all stores created by vendors.</p>
+  </div>
+
+  <div class="grid cols-3" id="stores"></div>
+</div>
+
+<div class="toast" id="toast">Loaded ✅</div>
+
+<script>
+const API="https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
+}
+function toast(text,type="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  t.style.background=(type==="red")?"#ef4444":(type==="yellow")?"#f59e0b":"#16a34a";
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1500);
+}
+
+const role = localStorage.getItem("role");
+if(role!=="admin") location.href="index.html";
+
+function storeCard(r){
+  const safeImg=r[4] || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=60";
+  return `
+    <div class="card">
+      <img class="card-img" src="${safeImg}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=60'"/>
+      <div class="title" style="margin-top:10px">${r[1]||""}</div>
+      <div class="small">📍 ${r[2]||""}</div>
+      <div class="small">⭐ ${r[3]||"4.5"}</div>
+      <div class="small"><b>Store ID:</b> ${r[0]||""}</div>
+      <div class="small"><b>Vendor:</b> ${r[5]||""}</div>
+    </div>
+  `;
+}
+
+function loadStores(){
+  api({action:"adminStores"})
+  .then(rows=>{
+    const box=document.getElementById("stores");
+    box.innerHTML="";
+    for(let i=1;i<rows.length;i++){
+      box.innerHTML += storeCard(rows[i]);
+    }
+    toast("Stores loaded ✅");
+  })
+  .catch(err=>{
+    console.error(err);
+    toast("Server error ❌","red");
+  });
+}
+
+loadStores();
+</script>
+
+<div class="footer-space"></div>
+</body>
+</html>

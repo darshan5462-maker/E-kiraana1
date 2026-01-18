@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>e-Kiraana • Groceries</title>
+  <title>e-Kiraana • Products</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,198 +14,158 @@
     <div class="brand">
       <div class="logo">E</div> e-Kiraana
     </div>
+
     <div class="nav-actions">
+      <a class="btn outline" href="categories.html">Categories</a>
       <a class="btn outline" href="cart.html">Cart <span class="badge" id="cartCount">0</span></a>
-      <a class="btn outline" href="categories.html">Back</a>
+      <a class="btn outline" href="orders.html">Orders</a>
     </div>
   </div>
 </div>
 
 <div class="container">
-
-  <!-- Hero -->
   <div class="hero">
-    <h1 id="title">Groceries</h1>
-    <p id="subtitle">Search and add groceries to cart.</p>
+    <h1 id="pageTitle">Products 🛍️</h1>
+    <p>Search and add items to cart.</p>
+
+    <input class="input" id="search" placeholder="Search products (eg: rice, milk, soap)" oninput="renderProducts()">
   </div>
 
-  <!-- Search -->
-  <input class="input" id="search" placeholder="Search groceries (name / brand)..." oninput="render()">
-  <br><br>
-
-  <!-- Products -->
-  <div class="grid cols-2" id="list"></div>
-
+  <div class="grid cols-4" id="productList"></div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast">Added to cart ✅</div>
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
 
-const user = localStorage.getItem("user");
-const role = localStorage.getItem("role");
-const storeId = localStorage.getItem("storeId");
-const storeName = localStorage.getItem("storeName");
-const category = localStorage.getItem("category");
-
-if(!user) location.href="index.html";
-if(role !== "customer"){
-  alert("Only customers can access this page!");
-  location.href="index.html";
-}
-if(!storeId || !category){
-  alert("Select store and category first!");
-  location.href="home.html";
+function api(params){
+  const url = API + "?" + new URLSearchParams(params).toString();
+  return fetch(url).then(r=>r.json());
 }
 
-document.getElementById("title").textContent = category + " 🛒";
-document.getElementById("subtitle").textContent = "Store: " + (storeName || storeId);
-
-function showToast(text, color="green"){
-  const t = document.getElementById("toast");
-  t.textContent = text;
-
-  if(color==="red") t.style.background="#ef4444";
-  else if(color==="yellow") t.style.background="#f59e0b";
+function showToast(text, type="green"){
+  const t=document.getElementById("toast");
+  t.textContent=text;
+  if(type==="red") t.style.background="#ef4444";
+  else if(type==="yellow") t.style.background="#f59e0b";
   else t.style.background="#16a34a";
-
   t.style.display="block";
-  setTimeout(()=>{ t.style.display="none"; }, 1800);
+  setTimeout(()=>t.style.display="none",2000);
 }
 
-// ✅ Cart functions
-function getCart(){
-  return JSON.parse(localStorage.getItem("cart") || "[]");
-}
-function saveCart(c){
-  localStorage.setItem("cart", JSON.stringify(c));
-  updateCartCount();
-}
 function updateCartCount(){
-  const c = getCart();
-  const count = c.reduce((a,b)=> a + (b.qty||1), 0);
-  document.getElementById("cartCount").textContent = count;
-}
-updateCartCount();
-
-let PRODUCTS = [];
-
-fetch(API,{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body:JSON.stringify({ action:"products", storeId, category })
-})
-.then(r=>r.json())
-.then(rows=>{
-  // Products: productId | storeId | category | productName | brand | price | unit | imageUrl
-  PRODUCTS = rows.slice(1).map(p=>({
-    id:p[0],
-    storeId:p[1],
-    category:p[2],
-    name:p[3],
-    brand:p[4],
-    price:Number(p[5]),
-    unit:p[6],
-    img:p[7]
-  }));
-  render();
-})
-.catch(err=>{
-  console.error(err);
-  document.getElementById("list").innerHTML =
-    `<div class="card"><b>Server Error</b><div class="small">Check API deployment</div></div>`;
-});
-
-function getQty(id){
-  const cart = getCart();
-  const it = cart.find(x=>x.id===id);
-  return it ? it.qty : 0;
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  document.getElementById("cartCount").textContent = cart.length;
 }
 
-function render(){
-  const q = document.getElementById("search").value.toLowerCase();
-  const box = document.getElementById("list");
-  box.innerHTML = "";
+function getStore(){
+  return {
+    id: localStorage.getItem("selectedStoreId"),
+    name: localStorage.getItem("selectedStoreName")
+  };
+}
 
-  const filtered = PRODUCTS.filter(p =>
-    (p.name + " " + p.brand).toLowerCase().includes(q)
-  );
+function getCategory(){
+  return localStorage.getItem("selectedCategory");
+}
 
-  if(filtered.length === 0){
-    box.innerHTML = `<div class="card"><b>No groceries found</b><div class="small">Try another search</div></div>`;
-    return;
+let ALL_PRODUCTS = [];
+
+function addToCart(item){
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+  // merge qty if already exists
+  const idx = cart.findIndex(x => x.productId === item.productId);
+  if(idx >= 0){
+    cart[idx].qty = (cart[idx].qty || 1) + 1;
+  } else {
+    item.qty = 1;
+    cart.push(item);
   }
 
-  filtered.forEach(p=>{
-    const d = document.createElement("div");
-    d.className="card";
-
-    d.innerHTML = `
-      <div class="product">
-        <div class="imgbox">
-          ${
-            p.img
-            ? `<img src="${p.img}" alt="${p.name}">`
-            : `<div style="width:100%;height:100%;display:grid;place-items:center;font-weight:900;color:#0284c7;">No Img</div>`
-          }
-        </div>
-
-        <div style="flex:1">
-          <b style="font-size:17px">${p.name}</b>
-          <div class="small">${p.brand || ""} • ${p.unit}</div>
-
-          <div class="row space" style="margin-top:10px">
-            <div class="price">₹${p.price}</div>
-
-            <div class="qty">
-              <button class="qbtn" onclick="dec('${p.id}')">-</button>
-              <b id="q_${p.id}">${getQty(p.id)}</b>
-              <button class="qbtn" onclick="inc('${p.id}','${escapeQuotes(p.name)}','${escapeQuotes(p.brand)}',${p.price},'${escapeQuotes(p.unit)}','${escapeQuotes(p.img||"")}')">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    box.appendChild(d);
-  });
-}
-
-function escapeQuotes(t){
-  return String(t||"").replace(/'/g, "\\'");
-}
-
-function inc(id,name,brand,price,unit,img){
-  const cart = getCart();
-  const ex = cart.find(x=>x.id===id);
-
-  if(ex) ex.qty++;
-  else cart.push({ id, name, brand, price, unit, img, qty:1 });
-
-  saveCart(cart);
-  document.getElementById("q_"+id).textContent = getQty(id);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  updateCartCount();
   showToast("Added to cart ✅");
 }
 
-function dec(id){
-  const cart = getCart();
-  const ex = cart.find(x=>x.id===id);
-  if(!ex) return;
+function productCard(p){
+  const safeImg = p.imageUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=60";
 
-  ex.qty--;
-  if(ex.qty<=0){
-    const idx = cart.findIndex(x=>x.id===id);
-    cart.splice(idx,1);
-  }
-  saveCart(cart);
+  return `
+    <div class="card">
+      <img class="card-img" src="${safeImg}" alt="${p.productName}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=60'"/>
+      <div class="title" style="margin-top:10px">${p.productName}</div>
+      <div class="small">${p.brand || "e-Kiraana"}</div>
+      <div class="small"><b>₹ ${p.price}</b> / ${p.unit}</div>
 
-  const el=document.getElementById("q_"+id);
-  if(el) el.textContent=getQty(id);
-
-  showToast("Updated cart ✅","yellow");
+      <div style="margin-top:12px">
+        <button class="btn" onclick='addToCart(${JSON.stringify(p).replace(/'/g,"\\'")})'>Add</button>
+      </div>
+    </div>
+  `;
 }
+
+function renderProducts(){
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const list = document.getElementById("productList");
+  list.innerHTML = "";
+
+  const filtered = ALL_PRODUCTS.filter(p=>{
+    const s = (p.productName + " " + (p.brand||"") + " " + (p.unit||"")).toLowerCase();
+    return s.includes(q);
+  });
+
+  filtered.forEach(p=>{
+    list.innerHTML += productCard(p);
+  });
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="card"><div class="title">No products found</div><div class="small">Try different search or category.</div></div>`;
+  }
+}
+
+function loadProducts(){
+  const store=getStore();
+  const category=getCategory();
+
+  if(!store.id || !category){
+    location.href="categories.html";
+    return;
+  }
+
+  document.getElementById("pageTitle").textContent = `Products • ${category}`;
+
+  api({action:"products", storeId:store.id, category})
+    .then(rows=>{
+      ALL_PRODUCTS = [];
+
+      // headers row index 0
+      for(let i=1;i<rows.length;i++){
+        const r=rows[i];
+        // [productId, storeId, category, productName, brand, price, unit, imageUrl]
+        ALL_PRODUCTS.push({
+          productId: r[0],
+          storeId: r[1],
+          category: r[2],
+          productName: r[3],
+          brand: r[4],
+          price: Number(r[5] || 0),
+          unit: r[6],
+          imageUrl: r[7]
+        });
+      }
+
+      renderProducts();
+    })
+    .catch(err=>{
+      console.error(err);
+      showToast("Failed to load products ❌","red");
+    });
+}
+
+updateCartCount();
+loadProducts();
 </script>
 
 <div class="footer-space"></div>
