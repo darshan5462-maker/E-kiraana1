@@ -28,7 +28,7 @@
   </div>
 
   <div class="grid cols-2">
-    <!-- Login Card -->
+    <!-- Login -->
     <div class="card">
       <div class="title">Login</div>
 
@@ -43,10 +43,9 @@
       <p class="small" id="msg" style="margin-top:12px;"></p>
     </div>
 
-    <!-- Info Card -->
+    <!-- Why -->
     <div class="card">
       <div class="title">Why e-Kiraana?</div>
-
       <div class="small" style="font-size:14px;line-height:1.7">
         ✅ Nearby kirana stores <br>
         ✅ Fresh groceries everyday <br>
@@ -54,82 +53,66 @@
         ✅ Secure order tracking <br>
         ✅ Vendor + Delivery + Admin system <br>
       </div>
-
       <hr>
-
-      <b style="display:block;margin-bottom:8px;">Demo Login Tip:</b>
-      <div class="small">
-        Create account first, then login using same username/password.
-      </div>
+      <b style="display:block;margin-bottom:8px;">Demo Tip:</b>
+      <div class="small">Create account first, then login with same username/password.</div>
     </div>
   </div>
 
 </div>
 
-<!-- ✅ Toast -->
+<!-- Toast -->
 <div class="toast" id="toast">Login successful ✅</div>
 
 <script>
+/* ✅ Keep SAME API in all pages */
 const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
+/* ✅ FIX: No headers => No CORS */
+function api(payload){
+  return fetch(API, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }).then(r => r.json());
+}
 
 function showToast(text, color="green"){
   const t = document.getElementById("toast");
   t.textContent = text;
 
-  // change toast color
-  if(color==="red") t.style.background = "#ef4444";
-  else if(color==="yellow") t.style.background = "#f59e0b";
-  else t.style.background = "#16a34a";
+  if(color==="red") t.style.background="#ef4444";
+  else if(color==="yellow") t.style.background="#f59e0b";
+  else t.style.background="#16a34a";
 
-  t.style.display = "block";
-  setTimeout(()=>{ t.style.display="none"; }, 2300);
+  t.style.display="block";
+  setTimeout(()=>{ t.style.display="none"; }, 2200);
 }
 
 function login(){
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
-  const msg = document.getElementById("msg");
 
-  msg.textContent = "";
-
-  if(!username || !password){
-    msg.textContent = "Please enter username and password.";
-    return;
-  }
-
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ action:"login", username, password })
-  })
-  .then(r=>r.json())
+  api({ action:"login", username, password })
   .then(d=>{
+    alert("LOGIN RESPONSE:\n" + JSON.stringify(d, null, 2));  // ✅ shows server reply
+
     if(d.ok){
-      // ✅ store session
       localStorage.setItem("user", d.user);
       localStorage.setItem("role", d.role);
 
-      showToast("Login successful ✅");
-
-      // ✅ redirect by role
-      setTimeout(()=>{
-        if(d.role === "vendor") location.href="vendor.html";
-        else if(d.role === "delivery") location.href="delivery.html";
-        else if(d.role === "admin") location.href="admin.html";
-        else location.href="home.html";
-      }, 1200);
-
-    } else {
-      showToast("Invalid username or password ❌", "red");
-      msg.textContent = d.msg || "Login failed.";
+      if(d.role === "vendor") location.href="vendor.html";
+      else if(d.role === "delivery") location.href="delivery.html";
+      else if(d.role === "admin") location.href="admin.html";
+      else location.href="home.html";
     }
   })
   .catch(err=>{
+    alert("FETCH ERROR:\n" + err);
     console.error(err);
-    showToast("Server Error ❌", "red");
-    msg.textContent = "Server error! Check API deployment.";
   });
 }
+
+
 </script>
 
 <div class="footer-space"></div>

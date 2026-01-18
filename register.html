@@ -56,11 +56,20 @@
 
 </div>
 
-<!-- ✅ Toast -->
+<!-- Toast -->
 <div class="toast" id="toast">Account created successfully ✅</div>
 
 <script>
+/* ✅ Keep SAME API in all pages */
 const API = "https://script.google.com/macros/s/AKfycbwnE6rvhunQy8pbs5y_N7kjjSW5hf58ypxg24nmSO5LzMmxEOajlXc1uY6IMjGO0Uo/exec";
+
+/* ✅ FIX: No headers => No CORS */
+function api(payload){
+  return fetch(API,{
+    method:"POST",
+    body: JSON.stringify(payload)
+  }).then(r=>r.json());
+}
 
 function showToast(text, color="green"){
   const t = document.getElementById("toast");
@@ -85,45 +94,29 @@ function register(){
 
   if(!username || !password){
     msg.textContent = "Username and password required!";
-    showToast("Fill all required fields ⚠️", "yellow");
+    showToast("Fill required fields ⚠️","yellow");
     return;
   }
 
-  fetch(API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      action:"register",
-      username,
-      password,
-      role,
-      phone
-    })
-  })
-  .then(res=>res.json())
+  api({ action:"register", username, password, role, phone })
   .then(data=>{
     if(data.ok){
       showToast("Account created successfully ✅");
 
-      // ✅ clear form
-      document.getElementById("username").value = "";
-      document.getElementById("password").value = "";
-      document.getElementById("phone").value = "";
+      document.getElementById("username").value="";
+      document.getElementById("password").value="";
+      document.getElementById("phone").value="";
 
-      // ✅ redirect after toast
-      setTimeout(()=>{
-        location.href="index.html";
-      }, 1300);
-
+      setTimeout(()=> location.href="index.html", 1300);
     } else {
       msg.textContent = data.msg || "Registration failed!";
-      showToast(data.msg || "Register failed ❌", "red");
+      showToast(data.msg || "Register failed ❌","red");
     }
   })
   .catch(err=>{
     console.error(err);
-    msg.textContent = "Server error! Check API deployment.";
-    showToast("Server Error ❌", "red");
+    msg.textContent = "Server error! Check Apps Script deployment.";
+    showToast("Server Error ❌","red");
   });
 }
 </script>
